@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir)",
+      "Read(//c/Users/18547/**)",
+      "Read(//c/Users/18547/STM32Cube/**)",
+      "Bash(C:/Users/18547/AppData/Local/stm32cube/bundles/cmake/4.2.3+st.1/bin/cmake.exe --build 'e:/new project/VS-F103/VS-CODE-F103/build/Debug')"
+    ]
+  }
+}
