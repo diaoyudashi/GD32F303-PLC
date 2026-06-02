@@ -32,20 +32,26 @@ extern "C" {
 #define EEPROM_DO_PORT          GPIOA
 
 /* ======================== TPL0501 Digital Pot ============================= */
-#define DPOT_CS_PIN             GPIO_PIN_3
-#define DPOT_CS_PORT            GPIOB
-#define DPOT_SCLK_PIN           GPIO_PIN_5
+/* TPL0501 pinout: pin4=SCLK, pin5=DIN, pin6=CS# */
+/* Two chips share SCLK(PB3) + DIN(PB5), independent CS(PC9/PC5) */
+#define DPOT_SCLK_PIN           GPIO_PIN_3
 #define DPOT_SCLK_PORT          GPIOB
-#define DPOT_DIN1_PIN           GPIO_PIN_9
-#define DPOT_DIN1_PORT          GPIOC
-#define DPOT_DIN2_PIN           GPIO_PIN_5
-#define DPOT_DIN2_PORT          GPIOC
+#define DPOT_DIN_PIN            GPIO_PIN_5
+#define DPOT_DIN_PORT           GPIOB
+#define DPOT_CS1_PIN            GPIO_PIN_9
+#define DPOT_CS1_PORT           GPIOC
+#define DPOT_CS2_PIN            GPIO_PIN_5
+#define DPOT_CS2_PORT           GPIOC
 
 /* ======================== BLDC Gate Driver EG3112 ========================== */
-/* Phase U: PA8(HIN)=TIM1_CH1, PB13(LIN)=TIM1_CH1N */
-/* Phase V: PA9(HIN)=TIM1_CH2, PB14(LIN)=TIM1_CH2N */
-/* Phase W: PA10(HIN)=TIM1_CH3, PB15(LIN)=TIM1_CH3N */
-/* (These are AF outputs configured in bsp_tim.c, not here) */
+/* High-side: PA8(HIN)=TIM1_CH1, PA9=TIM1_CH2, PA10=TIM1_CH3 (AF in bsp_tim.c) */
+/* Low-side: PB13(LIN_U), PB14(LIN_V), PB15(LIN_W) = GPIO push-pull */
+#define LS_U_PIN                GPIO_PIN_13
+#define LS_U_PORT               GPIOB
+#define LS_V_PIN                GPIO_PIN_14
+#define LS_V_PORT               GPIOB
+#define LS_W_PIN                GPIO_PIN_15
+#define LS_W_PORT               GPIOB
 
 /* ======================== Hall Sensors ===================================== */
 #define HALL_U_PIN              GPIO_PIN_1

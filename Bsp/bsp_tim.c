@@ -1,5 +1,4 @@
 #include "bsp_tim.h"
-#include "bsp_gpio.h"
 #include "app_config.h"
 
 TIM_HandleTypeDef htim1 = {0};
@@ -27,8 +26,7 @@ void BSP_TIM1_PWM_Init(void)
     gpio.Pin = GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10;
     HAL_GPIO_Init(GPIOA, &gpio);
 
-    gpio.Pin = GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
-    HAL_GPIO_Init(GPIOB, &gpio);
+    /* PB13/14/15 = GPIO push-pull (low-side control); init in BSP_GPIO_Init */
 
     /* TIM1 base: 72MHz, center-aligned, period = 72M/16k = 4500 */
     htim1.Instance = TIM1;
@@ -58,7 +56,7 @@ void BSP_TIM1_PWM_Init(void)
     bdt.OffStateIDLEMode = TIM_OSSI_ENABLE;
     bdt.LockLevel = TIM_LOCKLEVEL_OFF;
     bdt.DeadTime = 72;  /* 72 * 13.89ns ≈ 1μs */
-    bdt.BreakState = TIM_BREAK_ENABLE;
+    bdt.BreakState = TIM_BREAK_DISABLE;
     bdt.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
     bdt.BreakFilter = 0;
     bdt.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
@@ -84,13 +82,10 @@ void BSP_TIM1_PWM_Init(void)
 
 void BSP_TIM1_PWM_Start(void)
 {
+    /* HS only; complementary managed by SixStep() */
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
     __HAL_TIM_MOE_ENABLE(&htim1);
 }
 
@@ -103,15 +98,6 @@ void BSP_TIM1_PWM_Stop(void)
     HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
     HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_3);
-}
-
-void BSP_TIM1_SetDuty(uint8_t phase_u, uint8_t phase_v, uint8_t phase_w)
-{
-    /* Convert 0-255 → timer compare value */
-    uint16_t period = htim1.Init.Period;
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (uint16_t)phase_u * period / 255);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (uint16_t)phase_v * period / 255);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint16_t)phase_w * period / 255);
 }
 
 /* ========================== TIM2: PWM DAC for Photo ======================== */

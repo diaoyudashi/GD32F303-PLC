@@ -18,10 +18,10 @@ void BSP_GPIO_Init(void)
     HAL_GPIO_WritePin(EEPROM_CS_PORT, EEPROM_CS_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(EEPROM_SK_PORT, EEPROM_SK_PIN, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(EEPROM_DI_PORT, EEPROM_DI_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DPOT_CS_PORT, DPOT_CS_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(DPOT_SCLK_PORT, DPOT_SCLK_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DPOT_DIN1_PORT, DPOT_DIN1_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DPOT_DIN2_PORT, DPOT_DIN2_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(DPOT_DIN_PORT, DPOT_DIN_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(DPOT_CS1_PORT, DPOT_CS1_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(DPOT_CS2_PORT, DPOT_CS2_PIN, GPIO_PIN_SET);
 
     /* ---- Outputs ---- */
     gpio.Mode = GPIO_MODE_OUTPUT_PP;
@@ -43,14 +43,26 @@ void BSP_GPIO_Init(void)
     gpio.Pin = EEPROM_DI_PIN;
     HAL_GPIO_Init(EEPROM_DI_PORT, &gpio);
 
-    gpio.Pin = DPOT_CS_PIN;
-    HAL_GPIO_Init(DPOT_CS_PORT, &gpio);
     gpio.Pin = DPOT_SCLK_PIN;
     HAL_GPIO_Init(DPOT_SCLK_PORT, &gpio);
-    gpio.Pin = DPOT_DIN1_PIN;
-    HAL_GPIO_Init(DPOT_DIN1_PORT, &gpio);
-    gpio.Pin = DPOT_DIN2_PIN;
-    HAL_GPIO_Init(DPOT_DIN2_PORT, &gpio);
+    gpio.Pin = DPOT_DIN_PIN;
+    HAL_GPIO_Init(DPOT_DIN_PORT, &gpio);
+    gpio.Pin = DPOT_CS1_PIN;
+    HAL_GPIO_Init(DPOT_CS1_PORT, &gpio);
+    gpio.Pin = DPOT_CS2_PIN;
+    HAL_GPIO_Init(DPOT_CS2_PORT, &gpio);
+
+    /* EG3112 low-side MOSFETs: GPIO push-pull, off by default */
+    HAL_GPIO_WritePin(LS_U_PORT, LS_U_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LS_V_PORT, LS_V_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LS_W_PORT, LS_W_PIN, GPIO_PIN_RESET);
+    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+    gpio.Pin = LS_U_PIN;
+    HAL_GPIO_Init(LS_U_PORT, &gpio);
+    gpio.Pin = LS_V_PIN;
+    HAL_GPIO_Init(LS_V_PORT, &gpio);
+    gpio.Pin = LS_W_PIN;
+    HAL_GPIO_Init(LS_W_PORT, &gpio);
 
     /* ---- Inputs ---- */
     gpio.Mode = GPIO_MODE_INPUT;

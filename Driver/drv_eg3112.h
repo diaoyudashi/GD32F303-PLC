@@ -21,7 +21,6 @@ extern "C" {
 void EG3112_Enable(void);
 void EG3112_Disable(void);
 void EG3112_Brake(void);
-void EG3112_SetPhaseDuty(uint8_t u, uint8_t v, uint8_t w);
 
 #ifdef __cplusplus
 }

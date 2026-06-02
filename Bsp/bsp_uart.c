@@ -94,25 +94,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
-/* ========================== USART2: Debug (PA2/PA3) ======================== */
+/* ========================== USART2: Debug TX-only (PA2/PA3) ================ */
 void BSP_USART2_Debug_Init(void)
 {
-    GPIO_InitTypeDef gpio = {0};
-
-    __HAL_RCC_USART2_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-
-    gpio.Mode = GPIO_MODE_AF_PP;
-    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-
-    gpio.Pin = GPIO_PIN_2;  /* TX */
-    HAL_GPIO_Init(GPIOA, &gpio);
-
-    gpio.Pin = GPIO_PIN_3;  /* RX */
-    gpio.Mode = GPIO_MODE_INPUT;
-    gpio.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(GPIOA, &gpio);
-
     huart2.Instance = USART2;
     huart2.Init.BaudRate = 115200;
     huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -122,11 +106,8 @@ void BSP_USART2_Debug_Init(void)
     huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart2.Init.OverSampling = UART_OVERSAMPLING_16;
     HAL_UART_Init(&huart2);
-
-    HAL_NVIC_SetPriority(USART2_IRQn, NVIC_PRIO_USART2, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
-
-    HAL_UART_Receive_IT(&huart2, &uart2_rx_byte, 1);
+    /* GPIO + NVIC handled by HAL_UART_MspInit callback */
+    /* USART2 is TX-only; no RX IT */
 }
 
 void BSP_USART2_Send(uint8_t *data, uint16_t len)

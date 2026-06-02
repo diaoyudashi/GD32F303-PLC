@@ -1,3 +1,36 @@
-build
+# =================== CMake / Ninja build output ==================
+build/
+cmake-build-*/
+
+# =================== Compiled objects & deps =====================
+*.o
+*.obj
+*.d
+*.su
+
+# =================== Linker outputs ==============================
+*.elf
+*.hex
+*.bin
+*.map
+*.a
+*.lib
+
+# =================== CubeMX generated backups ====================
+*.ioc.bak
+*.mxproject.bak
+
+# =================== IDE / Editor ================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =================== OS junk =====================================
+Thumbs.db
+.DS_Store
+
+# =================== Internal project state ======================
 mx.scratch
 !.settings

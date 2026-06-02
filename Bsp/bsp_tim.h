@@ -14,7 +14,6 @@ extern TIM_HandleTypeDef htim3;  /* Encoder */
 void BSP_TIM1_PWM_Init(void);
 void BSP_TIM1_PWM_Start(void);
 void BSP_TIM1_PWM_Stop(void);
-void BSP_TIM1_SetDuty(uint8_t phase_u, uint8_t phase_v, uint8_t phase_w);
 
 void BSP_TIM2_PWMDAC_Init(void);
 void BSP_TIM2_SetDAC_CH3(uint16_t val);  /* PA4, photo1 threshold */

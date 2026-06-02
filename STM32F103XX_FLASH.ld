@@ -239,12 +239,13 @@ SECTIONS
 
 
 
-  /* Remove information from the standard libraries */
+  /* Remove unused debug/comment sections */
   /DISCARD/ :
   {
-    libc.a:* ( * )
-    libm.a:* ( * )
-    libgcc.a:* ( * )
+    *(.note)
+    *(.note.*)
+    *(.comment)
+    *(.debug_frame)
   }
 
 }

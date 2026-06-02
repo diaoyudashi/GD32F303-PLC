@@ -44,11 +44,8 @@ void EXTI15_10_IRQHandler(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t pin)
 {
-    uint8_t hall = 0;
-    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1)) hall |= 0x04;
-    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4)) hall |= 0x02;
-    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11)) hall |= 0x01;
-    APP_Motor_Hall_ISR(hall);
+    /* External Hall sensors (PB1/PB4/PC11) not populated — no-op */
+    (void)pin;
 }
 
 /* TIM1 */

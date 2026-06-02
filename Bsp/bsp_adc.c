@@ -42,7 +42,7 @@ void BSP_ADC1_Init(void)
     /* ADC1: 12-bit, scan mode, continuous, triggered by TIM1_TRGO */
     hadc1.Instance = ADC1;
     hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
-    hadc1.Init.ContinuousConvMode = DISABLE;           /* trigger-driven */
+    hadc1.Init.ContinuousConvMode = ENABLE;           /* keep scanning */
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;

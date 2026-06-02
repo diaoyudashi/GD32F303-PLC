@@ -27,4 +27,14 @@ void BSP_Clock_Init(void)
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
         Error_Handler();
     }
+
+    /* Update SystemCoreClock for peripheral baud rate calculation */
+    SystemCoreClockUpdate();
+
+    /* Re-configure SysTick for new 72MHz clock */
+    HAL_SYSTICK_Config(SystemCoreClock / 1000U);
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+
+    /* ADC clock: PCLK2/6 = 72/6 = 12MHz (F103 max = 14MHz) */
+    __HAL_RCC_ADC_CONFIG(RCC_ADCPCLK2_DIV6);
 }
