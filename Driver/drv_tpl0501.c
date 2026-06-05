@@ -22,7 +22,8 @@ void TPL0501_Init(void)
     /* GPIO already initialized by BSP_GPIO_Init() */
 }
 
-/* Write 8-bit value to TPL0501 #1 (CS=PC9) */
+/* Write 8-bit value to TPL0501 #1 (CS=PC9)
+ * CPOL=1: SCLK idle HIGH, data latched on falling edge */
 void TPL0501_SetChannel1(uint8_t val)
 {
     uint8_t i;
@@ -30,16 +31,17 @@ void TPL0501_SetChannel1(uint8_t val)
     TPL0501_Delay();
 
     for (i = 0; i < 8; i++) {
-        TPL0501_SCLK_Low();
+        TPL0501_SCLK_High();
         if (val & 0x80) TPL0501_DIN_High();
         else            TPL0501_DIN_Low();
         TPL0501_Delay();
-        TPL0501_SCLK_High();
+        TPL0501_SCLK_Low();   /* falling edge → latch data */
         TPL0501_Delay();
         val <<= 1;
     }
 
-    TPL0501_SCLK_Low();
+    TPL0501_SCLK_High();   /* idle HIGH */
+    TPL0501_DIN_High();     /* idle HIGH */
     TPL0501_Delay();
     TPL0501_CS1_High();
 }
@@ -52,16 +54,17 @@ void TPL0501_SetChannel2(uint8_t val)
     TPL0501_Delay();
 
     for (i = 0; i < 8; i++) {
-        TPL0501_SCLK_Low();
+        TPL0501_SCLK_High();
         if (val & 0x80) TPL0501_DIN_High();
         else            TPL0501_DIN_Low();
         TPL0501_Delay();
-        TPL0501_SCLK_High();
+        TPL0501_SCLK_Low();   /* falling edge → latch data */
         TPL0501_Delay();
         val <<= 1;
     }
 
-    TPL0501_SCLK_Low();
+    TPL0501_SCLK_High();   /* idle HIGH */
+    TPL0501_DIN_High();     /* idle HIGH */
     TPL0501_Delay();
     TPL0501_CS2_High();
 }

@@ -6,6 +6,7 @@
 #include "bsp_uart.h"
 #include "bsp_adc.h"
 #include "bsp_can.h"
+#include "app_sensor.h"
 
 /* Cortex-M3 fault handlers */
 void NMI_Handler(void)           { while (1); }
@@ -37,15 +38,19 @@ void EXTI4_IRQHandler(void)
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
 }
 
+void EXTI9_5_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);   /* PB9: photo2 yarn pulse */
+}
+
 void EXTI15_10_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_11);
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15 | GPIO_PIN_11);  /* PA15 photo1 + PC11 hall */
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t pin)
 {
-    /* External Hall sensors (PB1/PB4/PC11) not populated — no-op */
-    (void)pin;
+    APP_Sensor_Pulse_ISR(pin);  /* handles PA15 + PB9, ignores others */
 }
 
 /* TIM1 */

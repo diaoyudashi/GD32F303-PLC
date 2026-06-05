@@ -16,7 +16,7 @@ extern "C" {
 #define MOTOR_PWM_DEADTIME_NS   1000U
 
 /* ============================= ADC Sampling ================================ */
-#define ADC_BUF_SIZE            5
+#define ADC_BUF_SIZE            6
 #define ADC_FILTER_ALPHA        0.1f
 
 /* ============================= RS-485 ====================================== */

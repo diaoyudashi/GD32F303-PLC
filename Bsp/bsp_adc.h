@@ -7,8 +7,8 @@ extern "C" {
 
 #include "stm32f1xx_hal.h"
 
-#define ADC_NUM_CHANNELS    5
-#define ADC_BUF_SIZE        5
+#define ADC_NUM_CHANNELS    6
+#define ADC_BUF_SIZE        6
 
 /* Channel order in DMA buffer */
 #define ADC_CH_CURRENT_U    0  /* PC0: ADC_IN10 */
@@ -16,6 +16,7 @@ extern "C" {
 #define ADC_CH_CURRENT_W    2  /* PC2: ADC_IN12 */
 #define ADC_CH_PHOTO1       3  /* PB0: ADC_IN8  */
 #define ADC_CH_PHOTO2       4  /* PA0: ADC_IN0  */
+#define ADC_CH_HALL_TRIG    5  /* PB1: ADC_IN9 — linear Hall for motor trigger */
 
 extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_adc1;

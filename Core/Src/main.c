@@ -9,6 +9,8 @@
 #include "app_system.h"
 #include "app_led.h"
 #include "app_motor.h"
+#include "app_hall.h"
+#include "app_sensor.h"
 
 int __io_putchar(int ch)
 {
@@ -25,56 +27,87 @@ int main(void)
 
     printf("\r\n--- BOOT ---\r\n");
 
-    TPL0501_Init();
-    TPL0501_Set(255, 255);
     printf("POT max gain\r\n");
 
     BSP_ADC1_Init();
     BSP_ADC1_Start_DMA();
     printf("ADC started\r\n");
 
+    /* BSP_TIM2_PWMDAC_Init();  TODO: fix TIM2 hang */
+
     BSP_TIM1_PWM_Init();
+    printf("TIM1 OK\r\n");
+
     BSP_TIM3_Encoder_Init();
+    printf("TIM3 OK\r\n");
+
     APP_Motor_Init();
+    printf("Motor OK\r\n");
+
+    APP_Sensor_Init();
+    printf("Sensor OK\r\n");
+
+    APP_Hall_Init();
+    printf("Hall OK\r\n");
+
     printf("Motor ready\r\n");
 
     APP_System_Init();
     APP_LED_Init();
-    APP_LED_Set(0, LED_SLOW_BLINK);
+    APP_LED_Set(0, LED_ON);   /* LED1 = RED off */
+    APP_LED_Set(0, LED_OFF);
+    APP_LED_Set(1, LED_ON);   /* LED2 = GREEN solid */
 
-    APP_Motor_SetSpeed(50);  /* default duty */
+    APP_Motor_SetSpeed(50);
 
     uint32_t last = 0;
     uint8_t  running = 0;
+    uint8_t  broken = 0;
 
     while (1) {
         APP_System_Run();
         APP_LED_Run();
         APP_Motor_Run();
+        APP_Sensor_Run();
+        APP_Hall_Update();
 
-        if (APP_System_GetTick() - last >= 200) {
+        if (APP_System_GetTick() - last >= 100) {
             last = APP_System_GetTick();
 
-            uint32_t raw1 = BSP_ADC_GetChannel(ADC_CH_PHOTO1);
-            uint32_t raw2 = BSP_ADC_GetChannel(ADC_CH_PHOTO2);
+            uint16_t pb1_adc = APP_Hall_GetPB1_ADC();
+            uint8_t  trig    = APP_Hall_IsTriggered();
+            uint32_t revs    = APP_Hall_GetRevs();
 
-            #define THR  3950
-            uint8_t tri1 = (raw1 < THR);
-            uint8_t tri2 = (raw2 < THR);
+            /* Hall trigger: start/stop motor */
+            if (trig && !running && !broken) { APP_Motor_Start(); running = 1; }
+            else if (!trig && running)       { APP_Motor_Stop();  running = 0; }
 
-            if ((tri1 || tri2) && !running) {
-                APP_Motor_Start();
-                running = 1;
-            } else if (!tri1 && !tri2 && running) {
+            /* Yarn break: motor running + no pulse >250ms */
+            if (running && APP_Sensor_Broken()) {
                 APP_Motor_Stop();
                 running = 0;
+                broken  = 1;
+                APP_LED_Set(0, LED_SLOW_BLINK);  /* RED 1Hz blink */
+                APP_LED_Set(1, LED_OFF);
             }
 
-            printf("S1=%4lu S2=%4lu  MTR=%s  H=%d  I=%u\r\n",
-                   raw1, raw2,
-                   running ? "ON" : "OFF",
-                   APP_Motor_GetHall(),
-                   APP_Motor_GetCurrent());
+            /* Recover: Hall trigger clears again */
+            if (broken && !trig) {
+                broken = 0;
+                APP_LED_Set(0, LED_OFF);
+                APP_LED_Set(1, LED_ON);  /* GREEN solid */
+            }
+
+            uint16_t p1_a = APP_Sensor1_GetAnalog();
+            uint16_t p2_a = APP_Sensor2_GetAnalog();
+            uint8_t  p1_d = APP_Sensor1_GetOutput();
+            uint8_t  p2_d = APP_Sensor2_GetOutput();
+
+            printf("PB1=%4u T=%d REVS=%lu | P1=%d A=%4u P2=%d A=%4u | BRK=%d MTR=%s\r\n",
+                   pb1_adc, trig, revs,
+                   p1_d, p1_a, p2_d, p2_a,
+                   broken,
+                   running ? "ON":"OFF");
         }
     }
 }

@@ -18,8 +18,8 @@ void BSP_GPIO_Init(void)
     HAL_GPIO_WritePin(EEPROM_CS_PORT, EEPROM_CS_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(EEPROM_SK_PORT, EEPROM_SK_PIN, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(EEPROM_DI_PORT, EEPROM_DI_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DPOT_SCLK_PORT, DPOT_SCLK_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DPOT_DIN_PORT, DPOT_DIN_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(DPOT_SCLK_PORT, DPOT_SCLK_PIN, GPIO_PIN_SET);    /* idle HIGH */
+    HAL_GPIO_WritePin(DPOT_DIN_PORT, DPOT_DIN_PIN, GPIO_PIN_SET);      /* idle HIGH */
     HAL_GPIO_WritePin(DPOT_CS1_PORT, DPOT_CS1_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(DPOT_CS2_PORT, DPOT_CS2_PIN, GPIO_PIN_SET);
 
@@ -72,9 +72,8 @@ void BSP_GPIO_Init(void)
     gpio.Pin = EEPROM_DO_PIN;
     HAL_GPIO_Init(EEPROM_DO_PORT, &gpio);
 
-    /* Hall sensors */
-    gpio.Pin = HALL_U_PIN;
-    HAL_GPIO_Init(HALL_U_PORT, &gpio);
+    /* Hall sensors: PB1=analog(ADC), PB4=spare, PC11=counter */
+    /* PB1 now configured in bsp_adc.c as analog */
     gpio.Pin = HALL_V_PIN;
     HAL_GPIO_Init(HALL_V_PORT, &gpio);
     gpio.Pin = HALL_W_PIN;

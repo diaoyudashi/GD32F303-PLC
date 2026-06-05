@@ -1,4 +1,5 @@
 #include "bsp_tim.h"
+#include "bsp_gpio.h"
 #include "app_config.h"
 
 TIM_HandleTypeDef htim1 = {0};

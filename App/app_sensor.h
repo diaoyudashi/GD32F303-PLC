@@ -20,11 +20,14 @@ uint16_t APP_Sensor2_GetAnalog(void);
 uint8_t  APP_Sensor1_GetOutput(void);
 uint8_t  APP_Sensor2_GetOutput(void);
 
-/* Set comparator threshold via PWM DAC (PA4/PA5) */
+/* Yarn-break detection: returns 1 if no pulse for >250ms (motor must be running) */
+uint8_t APP_Sensor_Broken(void);
+
+/* Called from EXTI ISR — record pulse on falling edge */
+void APP_Sensor_Pulse_ISR(uint16_t pin);
+
 void APP_Sensor1_SetThreshold(uint16_t val);
 void APP_Sensor2_SetThreshold(uint16_t val);
-
-/* Set TPL0501 digital pot gain (0-255) */
 void APP_Sensor1_SetGain(uint8_t val);
 void APP_Sensor2_SetGain(uint8_t val);
 

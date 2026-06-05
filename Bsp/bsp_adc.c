@@ -15,13 +15,13 @@ void BSP_ADC1_Init(void)
     __HAL_RCC_ADC1_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
 
-    /* Analog inputs: PC0(IN10), PC1(IN11), PC2(IN12), PB0(IN8), PA0(IN0) */
+    /* Analog inputs: PC0/1/2, PB0, PA0, PB1 */
     gpio.Mode = GPIO_MODE_ANALOG;
     gpio.Pull = GPIO_NOPULL;
 
     gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2;
     HAL_GPIO_Init(GPIOC, &gpio);
-    gpio.Pin = GPIO_PIN_0;
+    gpio.Pin = GPIO_PIN_0 | GPIO_PIN_1;   /* PB0 + PB1 (linear Hall) */
     HAL_GPIO_Init(GPIOB, &gpio);
     gpio.Pin = GPIO_PIN_0;
     HAL_GPIO_Init(GPIOA, &gpio);
@@ -61,6 +61,8 @@ void BSP_ADC1_Init(void)
     ch.Rank = 4; ch.Channel = ADC_CHANNEL_8;   /* PB0: photo1 */
     HAL_ADC_ConfigChannel(&hadc1, &ch);
     ch.Rank = 5; ch.Channel = ADC_CHANNEL_0;   /* PA0: photo2 */
+    HAL_ADC_ConfigChannel(&hadc1, &ch);
+    ch.Rank = 6; ch.Channel = ADC_CHANNEL_9;   /* PB1: linear Hall trigger */
     HAL_ADC_ConfigChannel(&hadc1, &ch);
 
     /* NVIC for DMA */

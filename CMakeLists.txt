@@ -56,6 +56,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/app_led.c
     App/app_motor.c
     App/app_sensor.c
+    App/app_hall.c
     App/app_rs485.c
     App/app_can.c
     App/app_eeprom.c
