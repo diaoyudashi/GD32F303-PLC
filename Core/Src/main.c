@@ -33,7 +33,14 @@ int main(void)
     BSP_ADC1_Start_DMA();
     printf("ADC started\r\n");
 
-    /* BSP_TIM2_PWMDAC_Init();  TODO: fix TIM2 hang */
+    /* PA4/PA5 = input + pull-down → quiet 0V threshold */
+    {
+        GPIO_InitTypeDef g = {0};
+        g.Mode = GPIO_MODE_INPUT;
+        g.Pull = GPIO_NOPULL;   /* external resistor divider sets 2V */
+        g.Pin  = GPIO_PIN_4 | GPIO_PIN_5;
+        HAL_GPIO_Init(GPIOA, &g);
+    }
 
     BSP_TIM1_PWM_Init();
     printf("TIM1 OK\r\n");
@@ -62,7 +69,8 @@ int main(void)
 
     uint32_t last = 0;
     uint8_t  running = 0;
-    uint8_t  broken = 0;
+    uint8_t  broken  = 0;
+    uint8_t  pb4_prev = 0;
 
     while (1) {
         APP_System_Run();
@@ -77,34 +85,42 @@ int main(void)
             uint16_t pb1_adc = APP_Hall_GetPB1_ADC();
             uint8_t  trig    = APP_Hall_IsTriggered();
             uint32_t revs    = APP_Hall_GetRevs();
+            uint8_t  pb4     = APP_Hall_GetPB4();
+
+            /* PB4 latching sensor: any edge clears broken */
+            if (pb4 != pb4_prev && broken) broken = 0;
+            pb4_prev = pb4;
 
             /* Hall trigger: start/stop motor */
-            if (trig && !running && !broken) { APP_Motor_Start(); running = 1; }
+            if (trig && !running && !broken) {
+                APP_Motor_Start();
+                APP_Sensor_ResetPulse();
+                running = 1;
+            }
             else if (!trig && running)       { APP_Motor_Stop();  running = 0; }
 
-            /* Yarn break: motor running + no pulse >250ms */
+            /* Hall release always clears yarn alarm */
+            if (!trig) broken = 0;
+
+            /* Yarn break while running */
             if (running && APP_Sensor_Broken()) {
                 APP_Motor_Stop();
                 running = 0;
                 broken  = 1;
-                APP_LED_Set(0, LED_SLOW_BLINK);  /* RED 1Hz blink */
-                APP_LED_Set(1, LED_OFF);
             }
 
-            /* Recover: Hall trigger clears again */
-            if (broken && !trig) {
-                broken = 0;
-                APP_LED_Set(0, LED_OFF);
-                APP_LED_Set(1, LED_ON);  /* GREEN solid */
-            }
+            /* LED: red = broken, green = ok */
+            if (broken) { APP_LED_Set(0, LED_SLOW_BLINK); APP_LED_Set(1, LED_OFF); }
+            else        { APP_LED_Set(0, LED_OFF);        APP_LED_Set(1, LED_ON);  }
 
             uint16_t p1_a = APP_Sensor1_GetAnalog();
             uint16_t p2_a = APP_Sensor2_GetAnalog();
             uint8_t  p1_d = APP_Sensor1_GetOutput();
             uint8_t  p2_d = APP_Sensor2_GetOutput();
 
-            printf("PB1=%4u T=%d REVS=%lu | P1=%d A=%4u P2=%d A=%4u | BRK=%d MTR=%s\r\n",
+            printf("PB1=%4u T=%d REVS=%lu I1=%lu I2=%lu | P1=%d A=%4u P2=%d A=%4u | BRK=%d MTR=%s\r\n",
                    pb1_adc, trig, revs,
+                   APP_Sensor_GetISRCnt1(), APP_Sensor_GetISRCnt2(),
                    p1_d, p1_a, p2_d, p2_a,
                    broken,
                    running ? "ON":"OFF");

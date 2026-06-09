@@ -91,7 +91,7 @@ void BSP_GPIO_Init(void)
 
     /* Photo sensor stage1 monitors (analog, configured by bsp_adc) */
 
-    /* Photo sensor stage3 outputs (digital comparators) */
+    /* Photo sensor stage3 outputs (digital comparators): PB8=photo1, PB9=photo2 */
     gpio.Pin = PHOTO1_OUT_PIN;
     HAL_GPIO_Init(PHOTO1_OUT_PORT, &gpio);
     gpio.Pin = PHOTO2_OUT_PIN;

@@ -40,12 +40,12 @@ void EXTI4_IRQHandler(void)
 
 void EXTI9_5_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);   /* PB9: photo2 yarn pulse */
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);   /* PB9 = photo2 */
 }
 
 void EXTI15_10_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15 | GPIO_PIN_11);  /* PA15 photo1 + PC11 hall */
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);  /* PA15 = photo1 */
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t pin)

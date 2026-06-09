@@ -20,11 +20,14 @@ uint16_t APP_Sensor2_GetAnalog(void);
 uint8_t  APP_Sensor1_GetOutput(void);
 uint8_t  APP_Sensor2_GetOutput(void);
 
-/* Yarn-break detection: returns 1 if no pulse for >250ms (motor must be running) */
+/* Yarn-break detection: returns 1 if no pulse for >300ms */
 uint8_t APP_Sensor_Broken(void);
+void APP_Sensor_ResetPulse(void);    /* call when motor starts */
 
-/* Called from EXTI ISR — record pulse on falling edge */
+/* Called from EXTI ISR */
 void APP_Sensor_Pulse_ISR(uint16_t pin);
+uint32_t APP_Sensor_GetISRCnt1(void);
+uint32_t APP_Sensor_GetISRCnt2(void);
 
 void APP_Sensor1_SetThreshold(uint16_t val);
 void APP_Sensor2_SetThreshold(uint16_t val);
