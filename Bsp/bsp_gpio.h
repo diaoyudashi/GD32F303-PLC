@@ -92,6 +92,10 @@ extern "C" {
 #define PHOTO2_OUT_PIN          GPIO_PIN_9
 #define PHOTO2_OUT_PORT         GPIOB
 
+/* PB8 = spare interrupt input (no ADC) */
+#define PB8_PIN                 GPIO_PIN_8
+#define PB8_PORT                GPIOB
+
 /* ======================== API ============================================== */
 void BSP_GPIO_Init(void);
 

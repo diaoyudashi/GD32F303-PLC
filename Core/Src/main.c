@@ -12,6 +12,8 @@
 #include "app_hall.h"
 #include "app_sensor.h"
 
+volatile uint32_t pb8_cnt = 0;
+
 int __io_putchar(int ch)
 {
     HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
@@ -61,68 +63,99 @@ int main(void)
 
     APP_System_Init();
     APP_LED_Init();
-    APP_LED_Set(0, LED_ON);   /* LED1 = RED off */
-    APP_LED_Set(0, LED_OFF);
-    APP_LED_Set(1, LED_ON);   /* LED2 = GREEN solid */
+    APP_LED_Set(1, LED_ON);   /* green solid */
 
     APP_Motor_SetSpeed(50);
+
+    /* PB8 EXTI input */
+    { GPIO_InitTypeDef g = {0}; g.Mode = GPIO_MODE_IT_FALLING; g.Pull = GPIO_PULLUP;
+      g.Pin = PB8_PIN; HAL_GPIO_Init(PB8_PORT, &g); }
 
     uint32_t last = 0;
     uint8_t  running = 0;
     uint8_t  broken  = 0;
+    uint8_t  brk_ch  = 0;
     uint8_t  pb4_prev = 0;
 
     while (1) {
         APP_System_Run();
         APP_LED_Run();
+        /* Overcurrent: same stop as yarn break — no brake, no short */
+        #define OC_THR  3500
+        {
+            static uint16_t i_max = 0;
+            uint16_t i0 = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_U);
+            uint16_t i1 = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_V);
+            uint16_t i2 = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_W);
+            uint16_t im  = i0; if (i1 > im) im = i1; if (i2 > im) im = i2;
+            if (im > i_max) i_max = im;
+            /* if (running) printf("I=%4u/%4u/%4u MAX=%4u\r\n", i0, i1, i2, i_max); */
+            if (im > OC_THR && running) {
+                HAL_GPIO_WritePin(LS_U_PORT, LS_U_PIN, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(LS_V_PORT, LS_V_PIN, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(LS_W_PORT, LS_W_PIN, GPIO_PIN_RESET);
+                APP_Motor_Stop();
+                running = 0; broken = 1; brk_ch = 9;
+            }
+        }
+
         APP_Motor_Run();
         APP_Sensor_Run();
         APP_Hall_Update();
 
+        /* CH=1: YELLOW blink — both LEDs in sync */
+        static uint32_t ch1_t = 0; static uint8_t ch1_ph = 0;
+        if (broken && brk_ch == 1) {
+            if (APP_System_GetTick() - ch1_t >= 500) { ch1_t = APP_System_GetTick(); ch1_ph ^= 1; }
+            if (ch1_ph) { APP_LED_Set(0, LED_ON); APP_LED_Set(1, LED_ON); }   /* YELLOW */
+            else        { APP_LED_Set(0, LED_OFF); APP_LED_Set(1, LED_OFF); }  /* OFF */
+        }
+
+        /* CH=3: RED↔YELLOW alternate */
+        static uint32_t ch3_t = 0; static uint8_t ch3_ph = 0;
+        if (broken && brk_ch == 3) {
+            if (APP_System_GetTick() - ch3_t >= 500) { ch3_t = APP_System_GetTick(); ch3_ph ^= 1; }
+            if (ch3_ph) { APP_LED_Set(0, LED_ON); APP_LED_Set(1, LED_OFF); }  /* RED */
+            else        { APP_LED_Set(0, LED_ON); APP_LED_Set(1, LED_ON);  }  /* YELLOW */
+        }
+
         if (APP_System_GetTick() - last >= 100) {
             last = APP_System_GetTick();
 
-            uint16_t pb1_adc = APP_Hall_GetPB1_ADC();
             uint8_t  trig    = APP_Hall_IsTriggered();
             uint32_t revs    = APP_Hall_GetRevs();
             uint8_t  pb4     = APP_Hall_GetPB4();
 
-            /* PB4 latching sensor: any edge clears broken */
-            if (pb4 != pb4_prev && broken) broken = 0;
+            /* PB4 edge → clear alarm */
+            if (pb4 != pb4_prev && broken) { broken = 0; brk_ch = 0; }
             pb4_prev = pb4;
 
-            /* Hall trigger: start/stop motor */
+            /* Hall trigger */
             if (trig && !running && !broken) {
-                APP_Motor_Start();
-                APP_Sensor_ResetPulse();
-                running = 1;
-            }
-            else if (!trig && running)       { APP_Motor_Stop();  running = 0; }
+                APP_Motor_Start(); APP_Sensor_ResetPulse(); running = 1;
+            } else if (!trig && running) { APP_Motor_Stop(); running = 0; }
 
-            /* Hall release always clears yarn alarm */
-            if (!trig) broken = 0;
+            if (!trig) { broken = 0; brk_ch = 0; }
 
-            /* Yarn break while running */
-            if (running && APP_Sensor_Broken()) {
-                APP_Motor_Stop();
-                running = 0;
-                broken  = 1;
+            /* Yarn break */
+            if (running) {
+                brk_ch = APP_Sensor_WhichBroken();
+                if (brk_ch) { APP_Motor_Stop(); running = 0; broken = 1; }
             }
 
-            /* LED: red = broken, green = ok */
-            if (broken) { APP_LED_Set(0, LED_SLOW_BLINK); APP_LED_Set(1, LED_OFF); }
-            else        { APP_LED_Set(0, LED_OFF);        APP_LED_Set(1, LED_ON);  }
+            /* LED: CH=2 red, CH=9 fast-red, OK=green, CH=1+3 in 1ms loop */
+            if (brk_ch == 9) { APP_LED_Set(0, LED_FAST_BLINK); APP_LED_Set(1, LED_OFF); }
+            else if (broken && brk_ch == 2) { APP_LED_Set(0, LED_SLOW_BLINK); APP_LED_Set(1, LED_OFF); }
+            else if (!broken) { APP_LED_Set(0, LED_OFF); APP_LED_Set(1, LED_ON); }
 
-            uint16_t p1_a = APP_Sensor1_GetAnalog();
-            uint16_t p2_a = APP_Sensor2_GetAnalog();
-            uint8_t  p1_d = APP_Sensor1_GetOutput();
-            uint8_t  p2_d = APP_Sensor2_GetOutput();
+            uint16_t i_u = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_U);
+            uint16_t i_v = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_V);
+            uint16_t i_w = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_W);
+            uint16_t i_mx = i_u; if (i_v > i_mx) i_mx = i_v; if (i_w > i_mx) i_mx = i_w;
 
-            printf("PB1=%4u T=%d REVS=%lu I1=%lu I2=%lu | P1=%d A=%4u P2=%d A=%4u | BRK=%d MTR=%s\r\n",
-                   pb1_adc, trig, revs,
-                   APP_Sensor_GetISRCnt1(), APP_Sensor_GetISRCnt2(),
-                   p1_d, p1_a, p2_d, p2_a,
-                   broken,
+            printf("SPD=%d PB8=%lu REVS=%lu MTR=%s\r\n",
+                   APP_Motor_GetSpeed(), pb8_cnt,
+                   revs,
                    running ? "ON":"OFF");
         }
     }

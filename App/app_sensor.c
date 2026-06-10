@@ -11,7 +11,7 @@ static LPF_1st sensor1_filter, sensor2_filter;
 static volatile uint32_t pulse1_tick = 0;
 static volatile uint32_t pulse2_tick = 0;
 static uint32_t motor_start_tick = 0;
-#define YARN_TIMEOUT_MS   800
+#define YARN_TIMEOUT_MS   500
 #define YARN_GRACE_MS     800   /* ignore breaks in first 800ms after start */
 
 void APP_Sensor_Init(void)
@@ -19,8 +19,8 @@ void APP_Sensor_Init(void)
     LPF_Init(&sensor1_filter, 0.05f);
     LPF_Init(&sensor2_filter, 0.05f);
     TPL0501_Init();
-    TPL0501_SetChannel1(14);//P1  13
-    TPL0501_SetChannel2(8);//P2   8
+    TPL0501_SetChannel1(12);//P1  14上断纱 不够灵敏减小，太灵敏增大
+    TPL0501_SetChannel2(7);//P2   8下断纱
 
     __HAL_RCC_AFIO_CLK_ENABLE();
     __HAL_AFIO_REMAP_SWJ_NOJTAG();
@@ -57,6 +57,18 @@ void APP_Sensor_Pulse_ISR(uint16_t pin)
 
 uint32_t APP_Sensor_GetISRCnt1(void) { return isr_p1_cnt; }
 uint32_t APP_Sensor_GetISRCnt2(void) { return isr_p2_cnt; }
+
+uint8_t APP_Sensor_WhichBroken(void)
+{
+    uint32_t now = HAL_GetTick();
+    if (now - motor_start_tick < YARN_GRACE_MS) return 0;
+    uint8_t p1 = (now - pulse1_tick > YARN_TIMEOUT_MS) ? 1 : 0;
+    uint8_t p2 = (now - pulse2_tick > YARN_TIMEOUT_MS) ? 1 : 0;
+    if (p1 && p2) return 3;  /* both broken */
+    if (p1) return 1;
+    if (p2) return 2;
+    return 0;
+}
 
 void APP_Sensor_ResetPulse(void)
 {

@@ -41,6 +41,7 @@ void EXTI4_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);   /* PB9 = photo2 */
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);   /* PB8 = spare */
 }
 
 void EXTI15_10_IRQHandler(void)
@@ -48,9 +49,12 @@ void EXTI15_10_IRQHandler(void)
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);  /* PA15 = photo1 */
 }
 
+extern volatile uint32_t pb8_cnt;
+
 void HAL_GPIO_EXTI_Callback(uint16_t pin)
 {
-    APP_Sensor_Pulse_ISR(pin);  /* handles PA15 + PB9, ignores others */
+    if (pin == GPIO_PIN_8) pb8_cnt++;
+    APP_Sensor_Pulse_ISR(pin);
 }
 
 /* TIM1 */

@@ -20,9 +20,10 @@ uint16_t APP_Sensor2_GetAnalog(void);
 uint8_t  APP_Sensor1_GetOutput(void);
 uint8_t  APP_Sensor2_GetOutput(void);
 
-/* Yarn-break detection: returns 1 if no pulse for >300ms */
-uint8_t APP_Sensor_Broken(void);
-void APP_Sensor_ResetPulse(void);    /* call when motor starts */
+/* Yarn-break detection */
+uint8_t APP_Sensor_Broken(void);       /* 1=either channel broken */
+uint8_t APP_Sensor_WhichBroken(void);  /* 1=P1(upper), 2=P2(lower), 0=none */
+void APP_Sensor_ResetPulse(void);
 
 /* Called from EXTI ISR */
 void APP_Sensor_Pulse_ISR(uint16_t pin);
