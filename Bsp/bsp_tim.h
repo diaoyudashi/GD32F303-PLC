@@ -13,6 +13,7 @@ extern TIM_HandleTypeDef htim3;  /* Encoder */
 
 void BSP_TIM1_PWM_Init(void);
 void BSP_TIM1_PWM_Start(void);
+void BSP_TIM1_PWM_StartFOC(void);  /* all 6 complementary outputs */
 void BSP_TIM1_PWM_Stop(void);
 
 void BSP_TIM2_PWMDAC_Init(void);

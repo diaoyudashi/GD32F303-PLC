@@ -11,6 +11,9 @@
 #include "app_motor.h"
 #include "app_hall.h"
 #include "app_sensor.h"
+#include "app_foc.h"
+
+#define FOC_MODE  1   /* 0=6-step, 1=FOC */
 
 volatile uint32_t pb8_cnt = 0;
 
@@ -91,15 +94,17 @@ int main(void)
             if (im > i_max) i_max = im;
             /* if (running) printf("I=%4u/%4u/%4u MAX=%4u\r\n", i0, i1, i2, i_max); */
             if (im > OC_THR && running) {
-                HAL_GPIO_WritePin(LS_U_PORT, LS_U_PIN, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LS_V_PORT, LS_V_PIN, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LS_W_PORT, LS_W_PIN, GPIO_PIN_RESET);
-                APP_Motor_Stop();
+                if(FOC_MODE) FOC_Stop(); else {
+                    HAL_GPIO_WritePin(LS_U_PORT, LS_U_PIN, GPIO_PIN_RESET);
+                    HAL_GPIO_WritePin(LS_V_PORT, LS_V_PIN, GPIO_PIN_RESET);
+                    HAL_GPIO_WritePin(LS_W_PORT, LS_W_PIN, GPIO_PIN_RESET);
+                    APP_Motor_Stop();
+                }
                 running = 0; broken = 1; brk_ch = 9;
             }
         }
 
-        APP_Motor_Run();
+        if(FOC_MODE){if(running)FOC_Run();} else APP_Motor_Run();
         APP_Sensor_Run();
         APP_Hall_Update();
 
@@ -132,15 +137,22 @@ int main(void)
 
             /* Hall trigger */
             if (trig && !running && !broken) {
-                APP_Motor_Start(); APP_Sensor_ResetPulse(); running = 1;
-            } else if (!trig && running) { APP_Motor_Stop(); running = 0; }
+                if(FOC_MODE) FOC_Init(); else APP_Motor_Start();
+                APP_Sensor_ResetPulse(); running = 1;
+            } else if (!trig && running) {
+                if(FOC_MODE) FOC_Stop(); else APP_Motor_Stop();
+                running = 0;
+            }
 
             if (!trig) { broken = 0; brk_ch = 0; }
 
             /* Yarn break */
             if (running) {
                 brk_ch = APP_Sensor_WhichBroken();
-                if (brk_ch) { APP_Motor_Stop(); running = 0; broken = 1; }
+                if (brk_ch) {
+                    if(FOC_MODE) FOC_Stop(); else APP_Motor_Stop();
+                    running = 0; broken = 1;
+                }
             }
 
             /* LED: CH=2 red, CH=9 fast-red, OK=green, CH=1+3 in 1ms loop */
@@ -153,10 +165,10 @@ int main(void)
             uint16_t i_w = (uint16_t)BSP_ADC_GetChannel(ADC_CH_CURRENT_W);
             uint16_t i_mx = i_u; if (i_v > i_mx) i_mx = i_v; if (i_w > i_mx) i_mx = i_w;
 
-            printf("SPD=%d PB8=%lu REVS=%lu MTR=%s\r\n",
-                   APP_Motor_GetSpeed(), pb8_cnt,
-                   revs,
-                   running ? "ON":"OFF");
+            uint16_t i0=BSP_ADC_GetChannel(0),i1=BSP_ADC_GetChannel(1),i2=BSP_ADC_GetChannel(2);
+            printf("SPD=%d I=%u/%u/%u REVS=%lu %s\r\n",
+                   APP_Motor_GetSpeed(),i0,i1,i2,
+                   revs,running?"ON":"OFF");
         }
     }
 }
