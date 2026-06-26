@@ -1,5 +1,5 @@
 #ifndef __GXWORKS_H
 #define __GXWORKS_H
-#include "main.h"
-void GXWorks_Poll(void);
+void GXWorks_SendTx(void);
+void GXWorks_FeedByte(uint8_t d);
 #endif

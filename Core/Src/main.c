@@ -1,5 +1,7 @@
 #include "main.h"
 #include "bsp_gpio.h"
+#include "gxworks.h"
+
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
 void delay(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
@@ -10,7 +12,6 @@ void delay(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
 #define U0_BRR   (*(volatile uint32_t *)(U0_BASE + 0x08))
 #define U0_CR1   (*(volatile uint32_t *)(U0_BASE + 0x0C))
 #define U0_CR2   (*(volatile uint32_t *)(U0_BASE + 0x10))
-#define U0_CR3   (*(volatile uint32_t *)(U0_BASE + 0x14))
 #define CR1_UE   (1U<<13)
 #define CR1_TE   (1U<<3)
 #define CR1_RE   (1U<<2)
@@ -28,22 +29,20 @@ int main(void)
     rcu_periph_clock_enable(RCU_AF);
     gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_9);
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
-
-    /* === ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ STM32 USART_Init Ë³ï¿½ï¿½ === */
-    U0_BRR = 0x00000EA6;       /* 72MHz/19200 */
-    U0_CR2 = 0x0000;           /* Ä¬ï¿½ï¿½ */
-    U0_CR3 = 0x0000;           /* Ä¬ï¿½ï¿½ */
-    U0_CR1 = CR1_TE | CR1_RE;  /* Step1: TX+RX, UE=0 (Æ¥ï¿½ï¿½ USART_Init) */
-    U0_CR1 |= CR1_UE;          /* Step2: ï¿½ï¿½Ê¹ï¿½ï¿½ (Æ¥ï¿½ï¿½ USART_Cmd) */
+    U0_BRR = 0x00000EA6;
+    U0_CR2 = 0;
+    U0_CR1 = CR1_TE | CR1_RE;
+    U0_CR1 |= CR1_UE;
 
     while (1) {
+        /* ½ÓÊÕ ¡ª Î¹¸øÐ­Òé´¦ÀíÆ÷ */
         if (U0_SR & SR_RXNE) {
-            uint8_t d = (uint8_t)U0_DR;
-            if (d == 0x05 && (U0_SR & SR_TXE)) {
-                U0_DR = 0x06;       /* éžé˜»å¡ž TX */
-            }
+            GXWorks_FeedByte((uint8_t)U0_DR);
         }
-        LED_RUN_ON;  delay(500);
-        LED_RUN_OFF; delay(500);
+        /* ·¢ËÍ ¡ª Ð­ÒéÏìÓ¦ */
+        GXWorks_SendTx();
+
+        LED_RUN_ON;  delay(100);
+        LED_RUN_OFF; delay(100);
     }
 }
