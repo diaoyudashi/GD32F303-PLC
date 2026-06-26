@@ -11,9 +11,9 @@ extern "C" {
 #endif
 
 /* ======================== 系统时钟 ======================== */
-#define SYSTEM_CLOCK_HZ         120000000U  /* HXTAL 8MHz → PLL ×30÷2 = 120MHz */
-#define APB1_CLOCK_HZ           60000000U   /* AHB/2 */
-#define APB2_CLOCK_HZ           120000000U  /* AHB/1 */
+#define SYSTEM_CLOCK_HZ         72000000U  /* HXTAL 8MHz → PLL ×30÷2 = 120MHz */
+#define APB1_CLOCK_HZ           36000000U   /* AHB/2 */
+#define APB2_CLOCK_HZ           72000000U  /* AHB/1 */
 #define SYSTICK_FREQ_HZ         1000U       /* 1ms 时基 */
 
 /* ======================== 串口 ======================== */
