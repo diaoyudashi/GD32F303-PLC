@@ -3,39 +3,41 @@
 
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
-void delay_ms(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
+void delay_ms(uint32_t ms) { uint32_t s = tick, limit = ms*10; while ((tick-s) < ms && --limit); }
 
-/* FX2N-style ENQ direct ACK */
 void USART0_IRQHandler(void)
 {
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
         uint8_t d = USART_ReceiveData(USART1);
         if (d == 0x05) {
             USART_SendData(USART1, 0x06);
-        } else {
+        } else if (d == 0x02) {
+            GXWorks_FeedByte(d);
+        } else if (d != 0x00) {
+            /* 帧内数据字节 */
             GXWorks_FeedByte(d);
         }
+    }
+    if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET) {
+        USART_ReceiveData(USART1); /* 清溢出 */
     }
 }
 
 int main(void)
 {
     SysTick_Config(SystemCoreClock / 1000);
-    
-    /* USART1: PA9/PA10 19200 8N1 */
-    /* LED pins: PF9(ERR), PF10(RUN) */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOF, ENABLE);
-    GPIO_InitTypeDef lg;
-    lg.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
-    lg.GPIO_Speed = GPIO_Speed_50MHz;
-    lg.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOF, &lg);
-    GPIO_SetBits(GPIOF, GPIO_Pin_9 | GPIO_Pin_10); /* LED off */
 
-    /* USART1: PA9/PA10 19200 8N1 */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
+    /* LED */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOF, ENABLE);
     GPIO_InitTypeDef g;
-    g.GPIO_Pin = GPIO_Pin_9; g.GPIO_Speed = GPIO_Speed_50MHz; g.GPIO_Mode = GPIO_Mode_AF_PP; GPIO_Init(GPIOA, &g);
+    g.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+    g.GPIO_Speed = GPIO_Speed_50MHz; g.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOF, &g);
+    GPIO_SetBits(GPIOF, GPIO_Pin_9 | GPIO_Pin_10);
+
+    /* USART1 */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
+    g.GPIO_Pin = GPIO_Pin_9; g.GPIO_Mode = GPIO_Mode_AF_PP; GPIO_Init(GPIOA, &g);
     g.GPIO_Pin = GPIO_Pin_10; g.GPIO_Mode = GPIO_Mode_IN_FLOATING; GPIO_Init(GPIOA, &g);
 
     USART_InitTypeDef u;
@@ -56,11 +58,9 @@ int main(void)
     n.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&n);
 
-    GPIO_SetBits(GPIOF, GPIO_Pin_9);
-
     while (1) {
         GXWorks_SendTx();
-        GPIO_ResetBits(GPIOF, GPIO_Pin_10);  delay_ms(200);
-        GPIO_SetBits(GPIOF, GPIO_Pin_10); delay_ms(200);
+        GPIO_ResetBits(GPIOF, GPIO_Pin_10); delay_ms(500);
+        GPIO_SetBits(GPIOF, GPIO_Pin_10);   delay_ms(500);
     }
 }
