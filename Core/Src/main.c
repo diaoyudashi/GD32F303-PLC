@@ -9,5 +9,13 @@ int main(void) {
     BSP_GPIO_Init();
     BSP_USART_Init();
     LED_ERR_OFF;
-    while (1) { LED_RUN_ON; delay_ms(500); LED_RUN_OFF; delay_ms(500); }
+    { uint8_t junk[64]; BSP_USART_GetRxData(COM_PLC, junk, 64); }
+    while (1) {
+        uint8_t d;
+        while (BSP_USART_GetRxData(COM_PLC, &d, 1) > 0) {
+            if (d == 0x05) BSP_USART_SendByte(COM_PLC, 0x06);
+        }
+        LED_RUN_ON;  delay_ms(500);
+        LED_RUN_OFF; delay_ms(500);
+    }
 }
