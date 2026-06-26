@@ -35,11 +35,14 @@ int main(void)
     U0_CR1 |= CR1_UE;
 
     while (1) {
-        /* ���� �� ι��Э�鴦���� */
         if (U0_SR & SR_RXNE) {
-            GXWorks_FeedByte((uint8_t)U0_DR);
+            uint8_t d = (uint8_t)U0_DR;
+            if (d == 0x05) {
+                if (U0_SR & SR_TXE) U0_DR = 0x06;  /* ENQ -> ACK */
+            } else {
+                GXWorks_FeedByte(d);  /* STX etc -> frame */
+            }
         }
-        /* ���� �� Э����Ӧ */
         GXWorks_SendTx();
 
         LED_RUN_ON;  delay(100);
