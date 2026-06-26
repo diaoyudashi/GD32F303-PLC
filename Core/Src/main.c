@@ -6,7 +6,7 @@ void SysTick_Handler(void) { tick++; }
 void delay_ms(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
 
 /* FX2N-style ENQ direct ACK */
-void USART1_IRQHandler(void)
+void USART0_IRQHandler(void)
 {
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
         uint8_t d = USART_ReceiveData(USART1);
