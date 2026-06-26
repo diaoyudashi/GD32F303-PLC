@@ -2,16 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "J-Link Debug",
+            "name": "J-Link GD32F303",
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/build/Debug/VS-CODE-F103.elf",
+            "executable": "${workspaceFolder}/build/Debug/VS-GD32-F303.elf",
             "servertype": "jlink",
-            "device": "STM32F103RB",
+            "device": "STM32F103ZE",
             "interface": "swd",
-            "svdFile": "${workspaceFolder}/.vscode/STM32F103.svd",
-            "runToEntryPoint": "main"
+            "runToEntryPoint": "main",
+            "preLaunchTask": "Build"
         }
     ]
 }

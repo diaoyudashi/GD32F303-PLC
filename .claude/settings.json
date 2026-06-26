@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b \"e:\\\\new project\\\\VS-GD32F303ZET6\\\\VS-GD32F303ZET6\")",
+      "Bash(findstr /v \"\\\\.git\\\\\\\\\")",
+      "Bash(findstr /v \"node_modules\")",
+      "Bash(cmd /c \"dir /s /b /a-d\")",
+      "Bash(findstr /v /i \"\\\\.git\\\\\\\\\")",
+      "Bash(findstr /v /i \"node_modules\")",
+      "Bash(findstr /v /i \"\\\\.ninja\")",
+      "Bash(findstr /v /i \"build\\\\\\\\Debug\\\\\\\\\")",
+      "Bash(dir /s /b /a-d *.ld *.s *.S)",
+      "Bash(dir /s /b /a-d)",
+      "Bash(findstr /v /i \"\\\\\\\\.git\")",
+      "Bash(findstr /v /i \"build\\\\\\\\Debug\\\\\\\\CMakeCache\")",
+      "Bash(findstr /v /i \"build\\\\\\\\Debug\\\\\\\\cmake_install\")",
+      "Bash(curl -sI \"https://github.com/GigaDevice\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s \"https://api.github.com/repos/GigaDevice/GD32F30x_Firmware_Library/releases/latest\")",
+      "Bash(curl -s \"https://api.github.com/orgs/GigaDevice/repos?per_page=30\")",
+      "Bash(python3 -c \"import sys,json; [print\\(r['name']\\) for r in json.load\\(sys.stdin\\)]\")",
+      "Bash(curl -sI \"https://gd32mcu.21ic.com/data/documents/firmware/GD32F30x_Firmware.zip\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://api.github.com/orgs/GigaDevice/repos?per_page=50\")",
+      "Bash(python3 -c \"import sys,json; repos=json.load\\(sys.stdin\\); [print\\(r['name'],'|',r['description'][:50] if r['description'] else 'N/A'\\) for r in repos]\")"
+    ]
+  }
+}

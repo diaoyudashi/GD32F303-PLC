@@ -1,92 +1,53 @@
 cmake_minimum_required(VERSION 3.22)
-# Enable CMake support for ASM and C languages
 enable_language(C ASM)
-# STM32CubeMX generated symbols (macros)
-set(MX_Defines_Syms 
-	USE_HAL_DRIVER 
-	STM32F103xB
-    $<$<CONFIG:Debug>:DEBUG>
-)
 
-# STM32CubeMX generated include paths
-set(MX_Include_Dirs
+set(GD32_Defines USE_STDPERIPH_DRIVER GD32F30X_HD $<$<CONFIG:Debug>:DEBUG>)
+
+set(GD32_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/GD/GD32F30x/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../app/io
 )
 
-# STM32CubeMX generated application sources
-set(MX_Application_Src
+set(GD32_App_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f1xx_it.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f1xx_hal_msp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f103xb.s
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gd32f30x_it.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_gd32f30x_hd.S
 )
 
-# STM32 HAL/LL Drivers
-set(STM32_Drivers_Src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/system_stm32f1xx.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_can.c
+set(GD32_Drv_Src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/GD/GD32F30x/Source/system_gd32f30x.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_rcu.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_misc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_timer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_usart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_dma.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_adc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_exti.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_can.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_spi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_i2c.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_dac.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_pmu.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_bkp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_rtc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_crc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_wwdgt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_fwdgt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Source/gd32f30x_fmc.c
 )
 
-# Drivers Midllewares
+add_library(gd32f30x INTERFACE)
+target_include_directories(gd32f30x INTERFACE ${GD32_Include_Dirs})
+target_compile_definitions(gd32f30x INTERFACE ${GD32_Defines})
 
+add_library(GD32_Drivers OBJECT)
+target_sources(GD32_Drivers PRIVATE ${GD32_Drv_Src})
+target_link_libraries(GD32_Drivers PUBLIC gd32f30x)
 
-
-# Link directories setup
-set(MX_LINK_DIRS
-
-)
-# Project static libraries
-set(MX_LINK_LIBS 
-    STM32_Drivers
-    ${TOOLCHAIN_LINK_LIBRARIES}
-    
-)
-# Interface library for includes and symbols
-add_library(stm32cubemx INTERFACE)
-target_include_directories(stm32cubemx INTERFACE ${MX_Include_Dirs})
-target_compile_definitions(stm32cubemx INTERFACE ${MX_Defines_Syms})
-
-# Create STM32_Drivers static library
-add_library(STM32_Drivers OBJECT)
-target_sources(STM32_Drivers PRIVATE ${STM32_Drivers_Src})
-target_link_libraries(STM32_Drivers PUBLIC stm32cubemx)
-
-
-# Add STM32CubeMX generated application sources to the project
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${MX_Application_Src})
-
-# Link directories setup
-target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${MX_LINK_DIRS})
-
-# Add libraries to the project
-target_link_libraries(${CMAKE_PROJECT_NAME} ${MX_LINK_LIBS})
-
-# Add the map file to the list of files to be removed with 'clean' target
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${GD32_App_Src})
+target_link_libraries(${CMAKE_PROJECT_NAME} GD32_Drivers ${TOOLCHAIN_LINK_LIBRARIES})
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
-
-# Validate that STM32CubeMX code is compatible with C standard
-if((CMAKE_C_STANDARD EQUAL 90) OR (CMAKE_C_STANDARD EQUAL 99))
-    message(ERROR "Generated code requires C11 or higher")
-endif()

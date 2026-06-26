@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "STM32",
+            "name": "GD32F303",
             "compileCommands": "${workspaceFolder}/build/Debug/compile_commands.json"
         }
     ]

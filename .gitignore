@@ -1,36 +1,27 @@
-# =================== CMake / Ninja build output ==================
+# Build output
 build/
-cmake-build-*/
 
-# =================== Compiled objects & deps =====================
+# Object files
 *.o
 *.obj
 *.d
 *.su
 
-# =================== Linker outputs ==============================
+# Linker outputs
 *.elf
 *.hex
 *.bin
 *.map
-*.a
-*.lib
 
-# =================== CubeMX generated backups ====================
-*.ioc.bak
-*.mxproject.bak
-
-# =================== IDE / Editor ================================
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# =================== OS junk =====================================
+# OS junk
 Thumbs.db
 .DS_Store
 
-# =================== Internal project state ======================
-mx.scratch
-!.settings
+# GD32 firmware library (downloaded, not source)
+GD32F30x_Firmware_Library/
