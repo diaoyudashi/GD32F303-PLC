@@ -9,6 +9,7 @@ set(GD32_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/GD/GD32F30x/Include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/GD32F30x_StdPeriph/Include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../app/io
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../app/protocol
 )
 
 set(GD32_App_Src
@@ -16,6 +17,7 @@ set(GD32_App_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gd32f30x_it.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../bsp/bsp_gpio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../bsp/bsp_uart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../app/protocol/gxworks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_gd32f30x_hd.S
 )
 
