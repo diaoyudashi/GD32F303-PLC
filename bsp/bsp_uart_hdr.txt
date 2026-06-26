@@ -1,0 +1,14 @@
+/**
+ * @file    bsp_uart.c
+ * @brief   GD32F303 3 UART + DMA TX + IRQ RX
+ *  USART1 PA9/PA10 19200 DMA0_CH3  PLC/GX Works
+ *  USART2 PA2/PA3   9600 DMA0_CH6  Modbus LCD
+ *  UART4  PC10/PC11 19200  IRQ TX  Modbus 485 Servo
+ *  ∂‘’’: PLC_20220210_V1.0.4 (STM32 DMA1_CH4/CH7)
+ */
+
+#include "bsp_uart.h"
+
+static volatile uint8_t u1rx[UART1_RX_BUF_SIZE], u2rx[UART2_RX_BUF_SIZE], u4rx[UART4_RX_BUF_SIZE];
+static volatile uint16_t u1rh, u1rt, u2rh, u2rt, u4rh, u4rt;
+static volatile uint8_t u1tc, u2tc;
