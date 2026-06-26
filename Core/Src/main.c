@@ -1,10 +1,11 @@
 /**
  * @file    main.c
- * @brief   串口环回测试 — 验证 USART1 硬件链路
+ * @brief   串口验证 — USART1 持续发送, 串口助手观察
  *
- * 测试方法: 用杜邦线短接 PA9(TX) 和 PA10(RX)
- * 结果:    收到回环数据 → LED_RUN 快闪 (50ms)
- *          超时未收到   → LED_ERR 常亮
+ *  连接: PA9(TX) -> 串口工具 RX (USB转TTL或RS232)
+ *  配置: 19200 8N1
+ *  结果: 每秒输出一次 "GD32F303-PLC USART1 OK [xxx]"
+ *        LED_RUN 1Hz 闪烁
  */
 
 #include "main.h"
@@ -13,7 +14,10 @@
 
 volatile uint32_t g_tick_ms = 0;
 void SysTick_Handler(void) { g_tick_ms++; }
-void delay_ms(uint32_t ms) { uint32_t s = g_tick_ms; while ((g_tick_ms - s) < ms); }
+void delay_ms(uint32_t ms) {
+    uint32_t s = g_tick_ms;
+    while ((g_tick_ms - s) < ms);
+}
 
 int main(void)
 {
@@ -21,37 +25,29 @@ int main(void)
     BSP_GPIO_Init();
     BSP_USART_Init();
 
-    LED_RUN_OFF;
     LED_ERR_OFF;
 
-    /* ==== USART1 环回测试 ==== */
+    uint32_t cnt = 0;
+    char buf[64];
 
-    /* 发送测试字节 */
-    uint8_t test_byte = 0xA5;
-    BSP_USART_SendByte(COM_PLC, test_byte);
+    while (1) {
+        /* 运行灯 1Hz 闪烁 */
+        LED_RUN_ON;  delay_ms(500);
+        LED_RUN_OFF; delay_ms(500);
 
-    /* 等待接收回环数据 (超时 500ms) */
-    uint32_t t0 = g_tick_ms;
-    uint8_t rx_byte = 0;
-    uint8_t rx_cnt = 0;
+        /* USART1 输出测试信息 */
+        int len = 0;
+        for (int i = 0; "GD32F303-PLC USART1 OK ["[i]; i++)
+            buf[len++] = "GD32F303-PLC USART1 OK ["[i];
+        uint32_t n = cnt;
+        char num[10]; int ni = 0;
+        do { num[ni++] = '0' + (n % 10); n /= 10; } while (n);
+        while (ni) buf[len++] = num[--ni];
+        buf[len++] = ']';
+        buf[len++] = '\r';
+        buf[len++] = '\n';
 
-    while ((g_tick_ms - t0) < 500) {
-        if (BSP_USART_GetRxData(COM_PLC, &rx_byte, 1) > 0) {
-            rx_cnt = 1;
-            break;
-        }
-    }
-
-    /* ==== 结果判断 ==== */
-    if (rx_cnt > 0 && rx_byte == test_byte) {
-        /* 环回成功 — USART1 硬件 OK — LED_RUN 快闪 */
-        while (1) {
-            LED_RUN_ON;  delay_ms(50);
-            LED_RUN_OFF; delay_ms(50);
-        }
-    } else {
-        /* 环回失败 — LED_ERR 常亮 */
-        LED_ERR_ON;
-        while (1);
+        BSP_USART_SendBuf(COM_PLC, (uint8_t*)buf, len);
+        cnt++;
     }
 }
