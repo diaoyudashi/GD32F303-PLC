@@ -11,14 +11,10 @@ static volatile uint16_t u1rh, u1rt, u2rh, u2rt, u4rh, u4rt;
 void USART1_IRQHandler(void) {
     if (usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
         uint8_t d = usart_data_receive(USART1);
-        /* GX Works ENQ (0x05) -> 立即在中断里回复 ACK (0x06) */
-        if (d == 0x05) {
-            usart_data_transmit(USART1, 0x06);
-            while (!usart_flag_get(USART1, USART_FLAG_TBE));
-        } else {
-            uint16_t n = (u1rh + 1) % UART1_RX_BUF_SIZE;
-            if (n != u1rt) { u1rx[u1rh] = d; u1rh = n; }
-        }
+        /* 收到任何字节都回 ACK — 最简测试 */
+        usart_data_transmit(USART1, 0x06);
+        uint16_t n = (u1rh + 1) % UART1_RX_BUF_SIZE;
+        if (n != u1rt) { u1rx[u1rh] = d; u1rh = n; }
     }
     if (usart_interrupt_flag_get(USART1, USART_INT_FLAG_IDLE))
         usart_data_receive(USART1);
