@@ -107,6 +107,12 @@ extern "C" {
 #define Y21  PFout(14) /* 备用输出 */
 #define Y22  PFout(15) /* 备用输出 */
 
+/* ======================== 系统状态指示灯（非PLC软元件） ======================== */
+#define LED_ERR_ON    PFout(9) = 0   /* 错误指示灯 PF9  (低电平亮) */
+#define LED_ERR_OFF   PFout(9) = 1
+#define LED_RUN_ON    PFout(10) = 0  /* 运行指示灯 PF10 (低电平亮) */
+#define LED_RUN_OFF   PFout(10) = 1
+
 #ifdef __cplusplus
 }
 #endif
