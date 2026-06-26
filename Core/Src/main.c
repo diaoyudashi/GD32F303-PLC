@@ -1,51 +1,66 @@
-#include "main.h"
-#include "bsp_gpio.h"
+#include "stm32f10x.h"
 #include "gxworks.h"
 
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
-void delay(uint32_t ms) { uint32_t s = tick, limit = ms * 10; while ((tick - s) < ms && --limit); }
+void delay_ms(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
 
-#define U0_BASE  0x40013800U
-#define U0_SR    (*(volatile uint32_t *)(U0_BASE + 0x00))
-#define U0_DR    (*(volatile uint32_t *)(U0_BASE + 0x04))
-#define U0_BRR   (*(volatile uint32_t *)(U0_BASE + 0x08))
-#define U0_CR1   (*(volatile uint32_t *)(U0_BASE + 0x0C))
-#define U0_CR2   (*(volatile uint32_t *)(U0_BASE + 0x10))
-#define CR1_UE   (1U<<13)
-#define CR1_TE   (1U<<3)
-#define CR1_RE   (1U<<2)
-#define SR_RXNE  (1U<<5)
-#define SR_TXE   (1U<<7)
+/* FX2N-style ENQ direct ACK */
+void USART1_IRQHandler(void)
+{
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
+        uint8_t d = USART_ReceiveData(USART1);
+        if (d == 0x05) {
+            USART_SendData(USART1, 0x06);
+        } else {
+            GXWorks_FeedByte(d);
+        }
+    }
+}
 
 int main(void)
 {
     SysTick_Config(SystemCoreClock / 1000);
-    BSP_GPIO_Init();
-    LED_ERR_OFF;
+    
+    /* USART1: PA9/PA10 19200 8N1 */
+    /* LED pins: PF9(ERR), PF10(RUN) */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOF, ENABLE);
+    GPIO_InitTypeDef lg;
+    lg.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+    lg.GPIO_Speed = GPIO_Speed_50MHz;
+    lg.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOF, &lg);
+    GPIO_SetBits(GPIOF, GPIO_Pin_9 | GPIO_Pin_10); /* LED off */
 
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_USART0);
-    rcu_periph_clock_enable(RCU_AF);
-    gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_9);
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
-    U0_BRR = 0x00000EA6;
-    U0_CR2 = 0;
-    U0_CR1 = CR1_TE | CR1_RE;
-    U0_CR1 |= CR1_UE;
+    /* USART1: PA9/PA10 19200 8N1 */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
+    GPIO_InitTypeDef g;
+    g.GPIO_Pin = GPIO_Pin_9; g.GPIO_Speed = GPIO_Speed_50MHz; g.GPIO_Mode = GPIO_Mode_AF_PP; GPIO_Init(GPIOA, &g);
+    g.GPIO_Pin = GPIO_Pin_10; g.GPIO_Mode = GPIO_Mode_IN_FLOATING; GPIO_Init(GPIOA, &g);
+
+    USART_InitTypeDef u;
+    u.USART_BaudRate = 19200;
+    u.USART_WordLength = USART_WordLength_8b;
+    u.USART_StopBits = USART_StopBits_1;
+    u.USART_Parity = USART_Parity_No;
+    u.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    u.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+    USART_Init(USART1, &u);
+    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+    USART_Cmd(USART1, ENABLE);
+
+    NVIC_InitTypeDef n;
+    n.NVIC_IRQChannel = USART1_IRQn;
+    n.NVIC_IRQChannelPreemptionPriority = 3;
+    n.NVIC_IRQChannelSubPriority = 0;
+    n.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&n);
+
+    GPIO_SetBits(GPIOF, GPIO_Pin_9);
 
     while (1) {
-        if (U0_SR & SR_RXNE) {
-            uint8_t d = (uint8_t)U0_DR;
-            if (d == 0x05) {
-                if (U0_SR & SR_TXE) U0_DR = 0x06;  /* ENQ -> ACK */
-            } else {
-                GXWorks_FeedByte(d);  /* STX etc -> frame */
-            }
-        }
         GXWorks_SendTx();
-
-        LED_RUN_ON;  delay(100);
-        LED_RUN_OFF; delay(100);
+        GPIO_ResetBits(GPIOF, GPIO_Pin_10);  delay_ms(200);
+        GPIO_SetBits(GPIOF, GPIO_Pin_10); delay_ms(200);
     }
 }

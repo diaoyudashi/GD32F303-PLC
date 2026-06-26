@@ -98,10 +98,9 @@ static void gx_dispatch(void)
 void GXWorks_SendTx(void)
 {
     if (tx_cnt == 0) return;
-    /* ÂÖÑ¯·¢ËÍ */
     for (uint16_t i = 0; i < tx_cnt; i++) {
-        while (!(*(volatile uint32_t *)0x40013800U & (1U<<7)));  /* TXE */
-        *(volatile uint32_t *)0x40013804U = tx[i];
+        USART_SendData(USART1, tx[i]);
+        while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
     }
     tx_cnt = 0;
 }
