@@ -1,10 +1,5 @@
-/**
- * @file    main.c
- * @brief   轮询USART0 — 不用中断, 避免噪声触发
- */
 #include "main.h"
 #include "bsp_gpio.h"
-
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
 void delay(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
@@ -14,6 +9,8 @@ void delay(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
 #define U0_DR    (*(volatile uint32_t *)(U0_BASE + 0x04))
 #define U0_BRR   (*(volatile uint32_t *)(U0_BASE + 0x08))
 #define U0_CR1   (*(volatile uint32_t *)(U0_BASE + 0x0C))
+#define U0_CR2   (*(volatile uint32_t *)(U0_BASE + 0x10))
+#define U0_CR3   (*(volatile uint32_t *)(U0_BASE + 0x14))
 #define CR1_UE   (1U<<13)
 #define CR1_TE   (1U<<3)
 #define CR1_RE   (1U<<2)
@@ -32,16 +29,19 @@ int main(void)
     gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_9);
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
 
-    U0_BRR = 0x00000EA6;  /* 72MHz/19200 */
-    U0_CR1 = CR1_TE | CR1_RE | CR1_UE;  /* TX+RX, 无中断 */
+    /* === 完全对齐 STM32 USART_Init 顺序 === */
+    U0_BRR = 0x00000EA6;       /* 72MHz/19200 */
+    U0_CR2 = 0x0000;           /* 默认 */
+    U0_CR3 = 0x0000;           /* 默认 */
+    U0_CR1 = CR1_TE | CR1_RE;  /* Step1: TX+RX, UE=0 (匹配 USART_Init) */
+    U0_CR1 |= CR1_UE;          /* Step2: 开使能 (匹配 USART_Cmd) */
 
     while (1) {
-        /* 轮询接收 — 不在中断里处理 */
         if (U0_SR & SR_RXNE) {
             uint8_t d = (uint8_t)U0_DR;
             if (d == 0x05) {
-                while (!(U0_SR & SR_TXE));  /* 等 TX 空闲 */
-                U0_DR = 0x06;               /* 回 ACK */
+                while (!(U0_SR & SR_TXE));
+                U0_DR = 0x06;
             }
         }
         LED_RUN_ON;  delay(500);
