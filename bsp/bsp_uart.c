@@ -1,10 +1,6 @@
 /**
  * @file    bsp_uart.c
- * @brief   GD32F303 3Â·UART + DMA TX + ï¿½Ð¶ï¿½ RX
- *  USART1 PA9/PA10 19200 DMA0_CH3  PLCï¿½ï¿½ï¿½ï¿½/GX Works
- *  USART2 PA2/PA3   9600 DMA0_CH6  Modbus 232 LCD
- *  UART4  PC10/PC11 19200 IRQ       Modbus 485 ï¿½Å·ï¿½
- *  ï¿½ï¿½ï¿½ï¿½: PLC_20220210_V1.0.4 (STM32 DMA1_CH4/CH7)
+ * @brief   GD32F303 3Â·UART + DMA TX + ÖÐ¶Ï RX
  */
 
 #include "bsp_uart.h"
@@ -13,7 +9,10 @@ static volatile uint8_t u1rx[UART1_RX_BUF_SIZE], u2rx[UART2_RX_BUF_SIZE], u4rx[U
 static volatile uint16_t u1rh, u1rt, u2rh, u2rt, u4rh, u4rt;
 static volatile uint8_t u1tc, u2tc;
 
-#define RB_PUSH(rx, h, t, sz, d) do {     uint16_t n = ((h) + 1) % (sz);     if (n != (t)) { rx[h] = d; h = n; } } while(0)
+#define RB_PUSH(rx, h, t, sz, d) do { \
+    uint16_t n = ((h) + 1) % (sz); \
+    if (n != (t)) { rx[h] = d; h = n; } \
+} while(0)
 
 void USART1_IRQHandler(void) {
     if (usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE))
@@ -44,11 +43,7 @@ void DMA0_Channel6_IRQHandler(void) {
     }
 }
 
-static void _uart_cfg(uint32_t uart, uint32_t baud, uint32_t tx_pin, uint32_t rx_pin, uint32_t gpio) {
-    rcu_periph_clock_enable(RCU_AF);
-    rcu_periph_clock_enable(gpio);
-    gpio_init((gpio - GPIOA) / 0x400 + GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, tx_pin);
-    gpio_init((gpio - GPIOA) / 0x400 + GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, rx_pin);
+static void _uart_cfg(uint32_t uart, uint32_t baud) {
     usart_deinit(uart);
     usart_baudrate_set(uart, baud);
     usart_word_length_set(uart, USART_WL_8BIT);
@@ -63,47 +58,53 @@ static void _uart_cfg(uint32_t uart, uint32_t baud, uint32_t tx_pin, uint32_t rx
     usart_enable(uart);
 }
 
-void BSP_USART_Init(void) {
-    dma_parameter_struct dma_cfg;
+static void _dma_tx_cfg(uint32_t uart, dma_channel_enum ch) {
+    dma_parameter_struct d = {0};
+    dma_deinit(DMA0, ch);
+    dma_struct_para_init(&d);
+    d.periph_addr = (uint32_t)&USART_DATA(uart);
+    d.direction = DMA_MEMORY_TO_PERIPHERAL;
+    d.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
+    d.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
+    d.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
+    d.memory_width = DMA_MEMORY_WIDTH_8BIT;
+    d.priority = DMA_PRIORITY_HIGH;
+    dma_init(DMA0, ch, &d);
+    dma_interrupt_enable(DMA0, ch, DMA_CHXCTL_FTFIE);
+}
+
+void BSP_USART_Init(void)
+{
+    rcu_periph_clock_enable(RCU_AF);
     rcu_periph_clock_enable(RCU_DMA0);
 
-    /* USART1: PLCï¿½ï¿½ï¿½ï¿½ 19200 + DMA0_CH3 TX */
+    /* ====== USART1: PLCÏÂÔØ¿Ú PA9(TX) PA10(RX) 19200 DMA0_CH3 ====== */
+    rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_USART1);
-    _uart_cfg(USART1, 19200, GPIO_PIN_9, GPIO_PIN_10, RCU_GPIOA);
+    gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+    _uart_cfg(USART1, 19200);
     usart_dma_transmit_config(USART1, USART_TRANSMIT_DMA_ENABLE);
-    dma_struct_para_init(&dma_cfg);
-    dma_cfg.periph_addr = (uint32_t)&USART_DATA(USART1);
-    dma_cfg.direction = DMA_MEMORY_TO_PERIPHERAL;
-    dma_cfg.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
-    dma_cfg.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
-    dma_cfg.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
-    dma_cfg.memory_width = DMA_MEMORY_WIDTH_8BIT;
-    dma_cfg.priority = DMA_PRIORITY_HIGH;
-    dma_init(DMA0, DMA_CH3, &dma_cfg);
-    dma_interrupt_enable(DMA0, DMA_CH3, DMA_CHXCTL_FTFIE);
+    _dma_tx_cfg(USART1, DMA_CH3);
     nvic_irq_enable(DMA0_Channel3_IRQn, NVIC_PRIO_DMA, 0);
     nvic_irq_enable(USART1_IRQn, NVIC_PRIO_USART1, 0);
 
-    /* USART2: LCD Modbus 9600 + DMA0_CH6 TX */
+    /* ====== USART2: LCD Modbus PA2(TX) PA3(RX) 9600 DMA0_CH6 ====== */
     rcu_periph_clock_enable(RCU_USART2);
-    _uart_cfg(USART2, 9600, GPIO_PIN_2, GPIO_PIN_3, RCU_GPIOA);
+    gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_2);
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
+    _uart_cfg(USART2, 9600);
     usart_dma_transmit_config(USART2, USART_TRANSMIT_DMA_ENABLE);
-    dma_struct_para_init(&dma_cfg);
-    dma_cfg.periph_addr = (uint32_t)&USART_DATA(USART2);
-    dma_cfg.direction = DMA_MEMORY_TO_PERIPHERAL;
-    dma_cfg.periph_inc = DMA_PERIPH_INCREASE_DISABLE;
-    dma_cfg.memory_inc = DMA_MEMORY_INCREASE_ENABLE;
-    dma_cfg.periph_width = DMA_PERIPHERAL_WIDTH_8BIT;
-    dma_cfg.memory_width = DMA_MEMORY_WIDTH_8BIT;
-    dma_cfg.priority = DMA_PRIORITY_HIGH;
-    dma_init(DMA0, DMA_CH6, &dma_cfg);
-    dma_interrupt_enable(DMA0, DMA_CH6, DMA_CHXCTL_FTFIE);
+    _dma_tx_cfg(USART2, DMA_CH6);
     nvic_irq_enable(DMA0_Channel6_IRQn, NVIC_PRIO_DMA, 0);
     nvic_irq_enable(USART2_IRQn, NVIC_PRIO_USART2, 0);
 
-    /* UART4: ï¿½Å·ï¿½ Modbus 485 19200 ï¿½Ð¶ï¿½ï¿½Õ·ï¿½ (ï¿½ï¿½DMA) */
+    /* ====== UART4: ËÅ·þ Modbus 485 PC10(TX) PC11(RX) 19200 ====== */
+    rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_UART4);
-    _uart_cfg(UART4, 19200, GPIO_PIN_10, GPIO_PIN_11, RCU_GPIOC);
+    gpio_init(GPIOC, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+    gpio_init(GPIOC, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+    _uart_cfg(UART4, 19200);
     nvic_irq_enable(UART4_IRQn, NVIC_PRIO_UART4, 0);
 }
 
