@@ -1,11 +1,10 @@
 /**
  * @file    main.c
- * @brief   串口验证 — USART1 持续发送, 串口助手观察
+ * @brief   GX Works 通讯测试 — USART1 握手验证
  *
- *  连接: PA9(TX) -> 串口工具 RX (USB转TTL或RS232)
- *  配置: 19200 8N1
- *  结果: 每秒输出一次 "GD32F303-PLC USART1 OK [xxx]"
- *        LED_RUN 1Hz 闪烁
+ *  协议: GX Works 发 0x05(ENQ) -> MCU 回 0x06(ACK)
+ *  通过: LED_RUN 快闪 (通讯测试成功)
+ *  未通: LED_RUN 1Hz 慢闪 (等待连接)
  */
 
 #include "main.h"
@@ -13,6 +12,8 @@
 #include "bsp_uart.h"
 
 volatile uint32_t g_tick_ms = 0;
+volatile uint8_t  gx_connected = 0;  /* 收到过 ENQ 就置1 */
+
 void SysTick_Handler(void) { g_tick_ms++; }
 void delay_ms(uint32_t ms) {
     uint32_t s = g_tick_ms;
@@ -27,27 +28,30 @@ int main(void)
 
     LED_ERR_OFF;
 
-    uint32_t cnt = 0;
-    char buf[64];
-
     while (1) {
-        /* 运行灯 1Hz 闪烁 */
-        LED_RUN_ON;  delay_ms(500);
-        LED_RUN_OFF; delay_ms(500);
+        /* 检查 USART1 是否收到过 GX Works 的 0x05 */
+        uint8_t d;
+        while (BSP_USART_GetRxData(COM_PLC, &d, 1) > 0) {
+            if (d == 0x05) {
+                /* ENQ — 回复 ACK */
+                BSP_USART_SendByte(COM_PLC, 0x06);
+                gx_connected = 1;
+            }
+            /* STX (0x02) — 数据帧开始, 也回复 ACK */
+            else if (d == 0x02) {
+                BSP_USART_SendByte(COM_PLC, 0x06);
+                gx_connected = 1;
+            }
+        }
 
-        /* USART1 输出测试信息 */
-        int len = 0;
-        for (int i = 0; "GD32F303-PLC USART1 OK ["[i]; i++)
-            buf[len++] = "GD32F303-PLC USART1 OK ["[i];
-        uint32_t n = cnt;
-        char num[10]; int ni = 0;
-        do { num[ni++] = '0' + (n % 10); n /= 10; } while (n);
-        while (ni) buf[len++] = num[--ni];
-        buf[len++] = ']';
-        buf[len++] = '\r';
-        buf[len++] = '\n';
-
-        BSP_USART_SendBuf(COM_PLC, (uint8_t*)buf, len);
-        cnt++;
+        if (gx_connected) {
+            /* 通讯成功 — 快闪 */
+            LED_RUN_ON;  delay_ms(100);
+            LED_RUN_OFF; delay_ms(100);
+        } else {
+            /* 等待连接 — 慢闪 */
+            LED_RUN_ON;  delay_ms(500);
+            LED_RUN_OFF; delay_ms(500);
+        }
     }
 }
