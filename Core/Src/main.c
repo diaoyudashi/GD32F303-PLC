@@ -4,7 +4,7 @@
 
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
-void delay(uint32_t ms) { uint32_t s = tick; while ((tick - s) < ms); }
+void delay(uint32_t ms) { uint32_t s = tick, limit = ms * 10; while ((tick - s) < ms && --limit); }
 
 #define U0_BASE  0x40013800U
 #define U0_SR    (*(volatile uint32_t *)(U0_BASE + 0x00))
@@ -35,11 +35,11 @@ int main(void)
     U0_CR1 |= CR1_UE;
 
     while (1) {
-        /* ½ÓÊÕ ¡ª Î¹¸øÐ­Òé´¦ÀíÆ÷ */
+        /* ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ Î¹ï¿½ï¿½Ð­ï¿½é´¦ï¿½ï¿½ï¿½ï¿½ */
         if (U0_SR & SR_RXNE) {
             GXWorks_FeedByte((uint8_t)U0_DR);
         }
-        /* ·¢ËÍ ¡ª Ð­ÒéÏìÓ¦ */
+        /* ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ Ð­ï¿½ï¿½ï¿½ï¿½Ó¦ */
         GXWorks_SendTx();
 
         LED_RUN_ON;  delay(100);
