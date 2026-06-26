@@ -6,6 +6,7 @@
 
 #include "main.h"
 #include "bsp_gpio.h"
+#include "bsp_uart.h"
 
 volatile uint32_t g_tick_ms = 0;  /* 1ms 系统时基 */
 
@@ -22,7 +23,7 @@ int main(void)
 
     /* ---- BSP 初始化 ---- */
     BSP_GPIO_Init();
-    /* BSP_USART_Init(); */
+    BSP_USART_Init();
     /* BSP_TIM_Init();   */
     /* BSP_DAC_Init();   */
 

@@ -15,6 +15,7 @@ set(GD32_App_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gd32f30x_it.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../bsp/bsp_gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../bsp/bsp_uart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_gd32f30x_hd.S
 )
 
