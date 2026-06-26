@@ -29,19 +29,18 @@ int main(void)
     gpio_init(GPIOA, GPIO_MODE_AF_PP,      GPIO_OSPEED_50MHZ, GPIO_PIN_9);
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
 
-    /* === ÕÍ»´∂‘∆Î STM32 USART_Init À≥–Ú === */
+    /* === ÔøΩÔøΩ»´ÔøΩÔøΩÔøΩÔøΩ STM32 USART_Init À≥ÔøΩÔøΩ === */
     U0_BRR = 0x00000EA6;       /* 72MHz/19200 */
-    U0_CR2 = 0x0000;           /* ƒ¨»œ */
-    U0_CR3 = 0x0000;           /* ƒ¨»œ */
-    U0_CR1 = CR1_TE | CR1_RE;  /* Step1: TX+RX, UE=0 (∆•≈‰ USART_Init) */
-    U0_CR1 |= CR1_UE;          /* Step2: ø™ πƒ‹ (∆•≈‰ USART_Cmd) */
+    U0_CR2 = 0x0000;           /* ƒ¨ÔøΩÔøΩ */
+    U0_CR3 = 0x0000;           /* ƒ¨ÔøΩÔøΩ */
+    U0_CR1 = CR1_TE | CR1_RE;  /* Step1: TX+RX, UE=0 (∆•ÔøΩÔøΩ USART_Init) */
+    U0_CR1 |= CR1_UE;          /* Step2: ÔøΩÔøΩ πÔøΩÔøΩ (∆•ÔøΩÔøΩ USART_Cmd) */
 
     while (1) {
         if (U0_SR & SR_RXNE) {
             uint8_t d = (uint8_t)U0_DR;
-            if (d == 0x05) {
-                while (!(U0_SR & SR_TXE));
-                U0_DR = 0x06;
+            if (d == 0x05 && (U0_SR & SR_TXE)) {
+                U0_DR = 0x06;       /* ÈùûÈòªÂ°û TX */
             }
         }
         LED_RUN_ON;  delay(500);
