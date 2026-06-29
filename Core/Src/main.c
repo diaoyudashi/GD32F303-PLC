@@ -1,103 +1,168 @@
 #include "stm32f10x.h"
-#include "gxworks.h"
 
 volatile uint32_t tick = 0;
 void SysTick_Handler(void) { tick++; }
-void delay_ms(uint32_t ms) { uint32_t s = tick, limit = ms*10; while ((tick-s) < ms && --limit); }
+void delay_ms(uint32_t ms) { uint32_t s = tick; while ((tick-s) < ms); }
 
-static uint8_t  tx_buf[256];
-static uint16_t tx_len = 0;
-static uint8_t  tx_busy = 0;
+static uint8_t  rx_buf[256];
+static volatile int16_t  rx_cnt = 0;
+static volatile uint8_t  reply_flag = 0;
+static const char Ascll[] = "0123456789ABCDEF";
 
-/* DMA TX complete */
-void DMA0_Channel3_IRQHandler(void)
+static void tx_frame(uint8_t *data, uint16_t len)
 {
-    if (DMA_GetITStatus(DMA1_IT_TC4)) {
-        DMA_ClearITPendingBit(DMA1_IT_TC4);
-        tx_busy = 0;
+    uint8_t sum = 0;
+    USART_SendData(USART1, 0x02);
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+    sum = sum + 0x02;
+    for (uint16_t i = 0; i < len; i++) {
+        USART_SendData(USART1, data[i]);
+        while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+        sum = sum + data[i];
     }
+    USART_SendData(USART1, 0x03);
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+    sum = sum + 0x03;
+    USART_SendData(USART1, Ascll[(sum >> 4) & 0x0F]);
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+    USART_SendData(USART1, Ascll[sum & 0x0F]);
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 }
 
-/* ISR: �յ�ENQ -> DMA��ACK; ������֡������ */
 void USART0_IRQHandler(void)
 {
-    if (USART_GetITStatus(USART1, USART_IT_RXNE)) {
-        uint8_t d = USART_ReceiveData(USART1);
-        if (d == 0x05 && !tx_busy) {
-            /* ENQ -> DMA����ACK */
-            tx_buf[0] = 0x06;
-            DMA_Cmd(DMA1_Channel4, DISABLE);
-            DMA_SetCurrDataCounter(DMA1_Channel4, 1);
-            DMA1_Channel4->CMAR = (uint32_t)tx_buf;
-            DMA_Cmd(DMA1_Channel4, ENABLE);
-            tx_busy = 1;
-        } else if (d != 0x05) {
-            GXWorks_FeedByte(d);
+    /* 仅处理 RXNE */
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) == SET) {
+        uint8_t byte_data = (uint8_t)(USART_ReceiveData(USART1) & 0x7F);
+
+        if (byte_data == 0x05) {
+            /* ENQ: 直接回单字节 ACK */
+            USART_SendData(USART1, 0x06);
+        } else if (byte_data == 0x02) {
+            /* STX: 开始新帧 */
+            rx_cnt = 1;
+            rx_buf[0] = 0x02;
+        } else if (rx_cnt > 0) {
+            /* 帧内数据 */
+            if (rx_cnt < 250) {
+                rx_buf[rx_cnt] = byte_data;
+                rx_cnt = rx_cnt + 1;
+            }
+            /* 收到 ETX 后, 再收 2 字节校验 → 帧完整 */
+            if (rx_cnt >= 5) {
+                if (rx_buf[rx_cnt - 3] == 0x03) {
+                    /* 校验和计算 */
+                    uint8_t cal_sum = 0;
+                    int16_t k = 0;
+                    while (rx_buf[k] != 0x03) {
+                        cal_sum = cal_sum + rx_buf[k];
+                        k = k + 1;
+                    }
+                    /* ASCII 校验和 -> 数值 */
+                    uint8_t rx_sum = 0;
+                    uint8_t ch = rx_buf[rx_cnt - 2];
+                    if (ch >= '0' && ch <= '9') {
+                        rx_sum = (uint8_t)((ch - '0') << 4);
+                    } else if (ch >= 'A' && ch <= 'F') {
+                        rx_sum = (uint8_t)((ch - 'A' + 10) << 4);
+                    }
+                    ch = rx_buf[rx_cnt - 1];
+                    if (ch >= '0' && ch <= '9') {
+                        rx_sum = rx_sum | (uint8_t)(ch - '0');
+                    } else if (ch >= 'A' && ch <= 'F') {
+                        rx_sum = rx_sum | (uint8_t)(ch - 'A' + 10);
+                    }
+
+                    if (cal_sum == rx_sum) {
+                        /* 校验成功 */
+                        GPIO_ResetBits(GPIOF, GPIO_Pin_9); /* ERR 灯亮 */
+                        reply_flag = 1;
+                    } else {
+                        /* 校验失败 — 也回复, 做诊断 */
+                        GPIO_SetBits(GPIOF, GPIO_Pin_9);   /* ERR 灯灭 */
+                        reply_flag = 1;                    /* 无条件回复 */
+                    }
+                    rx_cnt = 0;
+                }
+            }
         }
     }
-    if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET)
+
+    /* 清溢出 */
+    if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET) {
         USART_ReceiveData(USART1);
+    }
 }
 
 int main(void)
 {
     SysTick_Config(SystemCoreClock / 1000);
 
-    /* LED */
+    /* GPIOF9,10 = LED */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOF, ENABLE);
-    GPIO_InitTypeDef g;
-    g.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
-    g.GPIO_Speed = GPIO_Speed_50MHz; g.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOF, &g);
+    GPIO_InitTypeDef gpio_cfg;
+    
+    gpio_cfg.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+    gpio_cfg.GPIO_Speed = GPIO_Speed_50MHz;
+    gpio_cfg.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOF, &gpio_cfg);
     GPIO_SetBits(GPIOF, GPIO_Pin_9 | GPIO_Pin_10);
 
-    /* USART1 + DMA */
+    /* USART1: PA9=TX, PA10=RX */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-    g.GPIO_Pin = GPIO_Pin_9; g.GPIO_Mode = GPIO_Mode_AF_PP; GPIO_Init(GPIOA, &g);
-    g.GPIO_Pin = GPIO_Pin_10; g.GPIO_Mode = GPIO_Mode_IN_FLOATING; GPIO_Init(GPIOA, &g);
 
-    USART_InitTypeDef u;
-    u.USART_BaudRate = 19200;
-    u.USART_WordLength = USART_WordLength_8b;
-    u.USART_StopBits = USART_StopBits_1;
-    u.USART_Parity = USART_Parity_No;
-    u.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    u.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-    USART_Init(USART1, &u);
+    
+    gpio_cfg.GPIO_Pin = GPIO_Pin_9;
+    gpio_cfg.GPIO_Speed = GPIO_Speed_50MHz;
+    gpio_cfg.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_Init(GPIOA, &gpio_cfg);
+
+    
+    gpio_cfg.GPIO_Pin = GPIO_Pin_10;
+    gpio_cfg.GPIO_Speed = GPIO_Speed_50MHz;
+    gpio_cfg.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOA, &gpio_cfg);
+
+    USART_InitTypeDef usart_cfg;
+    
+    usart_cfg.USART_BaudRate = 19200;
+    usart_cfg.USART_WordLength = USART_WordLength_8b;
+    usart_cfg.USART_StopBits = USART_StopBits_1;
+    usart_cfg.USART_Parity = USART_Parity_No;
+    usart_cfg.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    usart_cfg.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+    USART_Init(USART1, &usart_cfg);
+
     USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-    USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
     USART_Cmd(USART1, ENABLE);
 
-    /* DMA1 Channel4 = USART1 TX */
-    DMA_InitTypeDef dma;
-    DMA_DeInit(DMA1_Channel4);
-    dma.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;
-    dma.DMA_MemoryBaseAddr = (uint32_t)tx_buf;
-    dma.DMA_DIR = DMA_DIR_PeripheralDST;
-    dma.DMA_BufferSize = 0;
-    dma.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-    dma.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    dma.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-    dma.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-    dma.DMA_Mode = DMA_Mode_Normal;
-    dma.DMA_Priority = DMA_Priority_High;
-    dma.DMA_M2M = DMA_M2M_Disable;
-    DMA_Init(DMA1_Channel4, &dma);
-    DMA_ITConfig(DMA1_Channel4, DMA_IT_TC, ENABLE);
+    NVIC_InitTypeDef nvic_cfg;
+    
+    nvic_cfg.NVIC_IRQChannel = 37;
+    nvic_cfg.NVIC_IRQChannelPreemptionPriority = 3;
+    nvic_cfg.NVIC_IRQChannelSubPriority = 0;
+    nvic_cfg.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&nvic_cfg);
 
-    NVIC_InitTypeDef n;
-    n.NVIC_IRQChannel = 30;
-    n.NVIC_IRQChannelPreemptionPriority = 3;
-    n.NVIC_IRQChannelSubPriority = 0;
-    n.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&n);
-    n.NVIC_IRQChannel = 37;
-    NVIC_Init(&n);
-
+    uint32_t last_blink = 0;
+    uint8_t  led = 1;
     while (1) {
-        GXWorks_SendTx();
-        GPIO_ResetBits(GPIOF, GPIO_Pin_10); delay_ms(500);
-        GPIO_SetBits(GPIOF, GPIO_Pin_10);   delay_ms(500);
+        if (reply_flag) {
+            reply_flag = 0;
+            uint16_t plc_model = 0x5EF6;
+            uint8_t reply_data[4];
+            uint8_t lo = (uint8_t)(plc_model & 0xFF);
+            uint8_t hi = (uint8_t)((plc_model >> 8) & 0xFF);
+            reply_data[0] = Ascll[(lo >> 4) & 0x0F];
+            reply_data[1] = Ascll[lo & 0x0F];
+            reply_data[2] = Ascll[(hi >> 4) & 0x0F];
+            reply_data[3] = Ascll[hi & 0x0F];
+            tx_frame(reply_data, 4);
+        }
+        if ((tick - last_blink) >= 500) {
+            last_blink = tick;
+            if (led) { GPIO_ResetBits(GPIOF, GPIO_Pin_10); led = 0; }
+            else     { GPIO_SetBits(GPIOF, GPIO_Pin_10);   led = 1; }
+        }
     }
 }
