@@ -1,5 +1,4 @@
 #ifndef __MAIN_H
 #define __MAIN_H
-#include "stm32f10x.h"
-#include "app_config.h"
+#include "gd32f30x.h"
 #endif
