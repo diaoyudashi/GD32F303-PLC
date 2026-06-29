@@ -8,11 +8,12 @@ static void tx_byte(uint8_t d) {
     usart_data_transmit(USART0, d);
     while (usart_flag_get(USART0, USART_FLAG_TBE) == RESET);
 }
-static void reply_model(void) {
-    uint16_t v = 0x5EF6; uint8_t lo = v & 0xFF, hi = (v >> 8) & 0xFF;
-    uint8_t r[4] = {Ascll[(lo>>4)&0xF], Ascll[lo&0xF], Ascll[(hi>>4)&0xF], Ascll[hi&0xF]};
+static void ack(void) { tx_byte(0x06); }
+static void nak(void) { tx_byte(0x15); }
+
+static void reply_frame(uint8_t *data, uint16_t len) {
     uint8_t s = 0; tx_byte(0x02);
-    for (int i = 0; i < 4; i++) { tx_byte(r[i]); s += r[i]; }
+    for (uint16_t i = 0; i < len; i++) { tx_byte(data[i]); s += data[i]; }
     tx_byte(0x03); s += 0x03;
     tx_byte(Ascll[(s>>4)&0xF]); tx_byte(Ascll[s&0xF]);
 }
@@ -40,12 +41,27 @@ int main(void) {
     while(1) {
         while(usart_flag_get(USART0,USART_FLAG_RBNE)==SET) {
             uint8_t d=usart_data_receive(USART0)&0x7F;
-            if(d==0x05){tx_byte(0x06);}
+            if(d==0x05){ack();}
             else if(d==0x02){n=1;rx[0]=0x02;}
             else if(n>0){if(n<250){rx[n]=d;n++;}
                 if(n>=5&&rx[n-3]==0x03){
-                    reply_model();
-                    gpio_bit_reset(GPIOF,GPIO_PIN_9); n=0;
+                    gpio_bit_reset(GPIOF,GPIO_PIN_9);
+                    uint8_t cmd = rx[1]; /* 命令在 rx[1] (对齐参考rx_data[3]) */
+
+                    switch(cmd) {
+                    case '0': /* 0x30 读字元件 -> 回 PLC 型号 */
+                        { uint16_t v=0x5EF6; uint8_t lo=v&0xFF,hi=(v>>8)&0xFF;
+                          uint8_t r[4]={Ascll[(lo>>4)&0xF],Ascll[lo&0xF],Ascll[(hi>>4)&0xF],Ascll[hi&0xF]};
+                          reply_frame(r,4); } break;
+                    case '1': /* 0x31 写字元件 */ ack(); break;
+                    case '4': /* 0x34 find_end */ ack(); break;
+                    case '7': /* 0x37 强制ON */ ack(); break;
+                    case '8': /* 0x38 强制OFF */ ack(); break;
+                    case 'B': /* 0x42 锁定 */ ack(); break;
+                    case 'E': /* 0x45 扩展指令 -> 回型号 */ { uint16_t v=0x5EF6; uint8_t lo=v&0xFF,hi=(v>>8)&0xFF; uint8_t r[4]={Ascll[(lo>>4)&0xF],Ascll[lo&0xF],Ascll[(hi>>4)&0xF],Ascll[hi&0xF]}; reply_frame(r,4); } break;
+                    default:  ack(); break;
+                    }
+                    n=0;
                 }
             }
         }
